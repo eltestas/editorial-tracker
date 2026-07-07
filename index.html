@@ -192,9 +192,32 @@ label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; colo
 .modal-title { font-family: 'DM Serif Display', serif; font-size: 20px; margin-bottom: 8px; }
 .modal-sub { font-size: 13px; color: rgba(26,22,17,0.5); margin-bottom: 20px; }
 .modal-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+
+/* Login screen */
+.login-screen { display:none; position:fixed; inset:0; background:var(--paper); z-index:200; align-items:center; justify-content:center; flex-direction:column; }
+.login-screen.visible { display:flex; }
+.login-box { background:white; border:1px solid var(--border); border-radius:var(--radius); padding:40px; width:100%; max-width:380px; box-shadow:0 8px 40px rgba(26,22,17,0.12); text-align:center; }
+.login-logo { font-family:'DM Serif Display',serif; font-size:28px; margin-bottom:4px; }
+.login-logo span { color:var(--accent); font-style:italic; }
+.login-sub { font-size:12px; color:rgba(26,22,17,0.4); margin-bottom:32px; text-transform:uppercase; letter-spacing:0.08em; }
+.login-box input { text-align:center; font-size:16px; letter-spacing:0.1em; margin-bottom:12px; }
+.login-box .btn { width:100%; padding:10px; font-size:14px; }
+.login-error { font-size:12px; color:var(--red); margin-top:8px; min-height:18px; }
+.login-box input:focus { border-color:var(--accent); }
 </style>
 </head>
 <body>
+
+<!-- Login screen -->
+<div class="login-screen" id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">Editorial <span>Tracker</span></div>
+    <div class="login-sub">Acceso protegido</div>
+    <input id="login-password" type="password" placeholder="Contraseña" onkeydown="if(event.key==='Enter')checkLogin()">
+    <button class="btn btn-primary" onclick="checkLogin()">Entrar</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
 
 <div class="header">
   <div class="header-title">Editorial <span>Tracker</span></div>
@@ -408,7 +431,36 @@ label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; colo
     <div class="section" id="section-config">
       <div class="section-header">
         <div class="section-title">Configuración</div>
-        <div class="section-sub">Sincronización con GitHub Gist</div>
+        <div class="section-sub">Contraseña y sincronización</div>
+      </div>
+
+      <!-- Password -->
+      <div class="form-card" style="max-width:560px;margin-bottom:20px">
+        <div class="form-section-title">🔒 Contraseña de acceso</div>
+        <p style="font-size:13px;color:rgba(26,22,17,0.6);line-height:1.6;margin-bottom:16px">
+          Protege el acceso al tracker. La sesión se recuerda por <strong>24 horas</strong>.
+        </p>
+        <div style="display:grid;gap:12px">
+          <div id="pwd-setup-msg" style="font-size:13px;padding:10px;border-radius:var(--radius);background:#fef3cd;color:#856404;display:none">
+            ⚠ Aún no tienes contraseña configurada. Cualquiera con la URL puede acceder.
+          </div>
+          <div>
+            <label id="pwd-current-label">Contraseña actual</label>
+            <input id="cfg-pwd-current" type="password" placeholder="Contraseña actual">
+          </div>
+          <div>
+            <label>Nueva contraseña</label>
+            <input id="cfg-pwd-new" type="password" placeholder="Nueva contraseña">
+          </div>
+          <div>
+            <label>Confirmar nueva contraseña</label>
+            <input id="cfg-pwd-confirm" type="password" placeholder="Repite la nueva contraseña">
+          </div>
+          <div>
+            <button class="btn btn-primary" onclick="changePassword()">🔒 Guardar contraseña</button>
+          </div>
+          <div id="pwd-result" style="font-size:13px;display:none;padding:10px;border-radius:var(--radius);border:1px solid var(--border)"></div>
+        </div>
       </div>
       <div class="form-card" style="max-width:560px">
         <div class="form-section-title">☁ GitHub Gist</div>
@@ -501,6 +553,113 @@ let books = [], quotes = [];
 let openFin = {}, editingFin = {}, editingDetails = {}, editingQuoteDetails = {}, openNotes = {};
 let approveId = null, archiveId = null;
 let showArchivedInBooks = false;
+
+/* ── AUTH ── */
+const PWD_KEY  = 'editorial_pwd_hash';
+const SESS_KEY = 'editorial_session';
+const SESSION_HOURS = 24;
+
+async function hashPassword(pwd) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pwd));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+function isSessionValid() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SESS_KEY)||'{}');
+    if (!s.ts) return false;
+    return (Date.now() - s.ts) < SESSION_HOURS * 60 * 60 * 1000;
+  } catch(e) { return false; }
+}
+
+function startSession() {
+  localStorage.setItem(SESS_KEY, JSON.stringify({ts: Date.now()}));
+}
+
+function hasPassword() {
+  return !!localStorage.getItem(PWD_KEY);
+}
+
+async function checkLogin() {
+  const pwd = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  if (!pwd) { errEl.textContent = 'Escribe tu contraseña.'; return; }
+  const hash = await hashPassword(pwd);
+  const stored = localStorage.getItem(PWD_KEY);
+  if (hash === stored) {
+    startSession();
+    document.getElementById('login-screen').classList.remove('visible');
+    document.getElementById('login-password').value = '';
+    errEl.textContent = '';
+  } else {
+    errEl.textContent = 'Contraseña incorrecta.';
+    document.getElementById('login-password').value = '';
+    document.getElementById('login-password').focus();
+  }
+}
+
+async function changePassword() {
+  const currentEl = document.getElementById('cfg-pwd-current');
+  const newEl     = document.getElementById('cfg-pwd-new');
+  const confirmEl = document.getElementById('cfg-pwd-confirm');
+  const resultEl  = document.getElementById('pwd-result');
+
+  const currentPwd = currentEl.value;
+  const newPwd     = newEl.value;
+  const confirmPwd = confirmEl.value;
+
+  const showResult = (msg, ok) => {
+    resultEl.style.display = '';
+    resultEl.style.background = ok ? '#eaf6ee' : '#fde8e8';
+    resultEl.style.color = ok ? 'var(--green)' : 'var(--red)';
+    resultEl.textContent = msg;
+  };
+
+  if (!newPwd) { showResult('La nueva contraseña no puede estar vacía.', false); return; }
+  if (newPwd !== confirmPwd) { showResult('Las contraseñas no coinciden.', false); return; }
+  if (newPwd.length < 4) { showResult('La contraseña debe tener al menos 4 caracteres.', false); return; }
+
+  // If there's an existing password, verify current one
+  if (hasPassword()) {
+    if (!currentPwd) { showResult('Escribe tu contraseña actual primero.', false); return; }
+    const currentHash = await hashPassword(currentPwd);
+    if (currentHash !== localStorage.getItem(PWD_KEY)) {
+      showResult('La contraseña actual es incorrecta.', false);
+      return;
+    }
+  }
+
+  const newHash = await hashPassword(newPwd);
+  localStorage.setItem(PWD_KEY, newHash);
+  startSession(); // keep session active after change
+  currentEl.value = ''; newEl.value = ''; confirmEl.value = '';
+  showResult('✓ Contraseña guardada correctamente.', true);
+  updatePwdStatus();
+}
+
+function updatePwdStatus() {
+  const setupMsg = document.getElementById('pwd-setup-msg');
+  const currentLabel = document.getElementById('pwd-current-label');
+  if (!setupMsg) return;
+  if (hasPassword()) {
+    setupMsg.style.display = 'none';
+    if (currentLabel) currentLabel.textContent = 'Contraseña actual';
+  } else {
+    setupMsg.style.display = '';
+    if (currentLabel) currentLabel.textContent = 'Contraseña actual (dejar vacío si es la primera vez)';
+  }
+}
+
+function initAuth() {
+  if (!hasPassword()) {
+    // No password set yet — let them in but show warning in config
+    return;
+  }
+  if (!isSessionValid()) {
+    document.getElementById('login-screen').classList.add('visible');
+    setTimeout(() => document.getElementById('login-password').focus(), 100);
+  }
+}
 
 /* ── GIST SYNC ── */
 const CFG_KEY = 'editorial_gist_config';
@@ -620,19 +779,19 @@ function save() {
 }
 
 function load() {
+  initAuth();
   try { const r = localStorage.getItem(SK); if (r) books = JSON.parse(r); } catch(e) { books = []; }
   try { const r = localStorage.getItem(QK); if (r) quotes = JSON.parse(r); } catch(e) { quotes = []; }
   loadCustomTasks();
   render();
-  // If Gist configured, load from cloud (cloud takes priority)
   if (gistConfigured()) {
     setSyncStatus('Cargando…', 'var(--accent2)');
     syncFromGist().catch(()=>{});
   } else {
     setSyncStatus('Sin nube', 'rgba(26,22,17,0.3)');
   }
-  // Populate config fields if already set
   setTimeout(updateCfgStatus, 100);
+  setTimeout(updatePwdStatus, 100);
 }
 
 const fmt = n => new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN',minimumFractionDigits:2}).format(n||0);
@@ -678,7 +837,7 @@ function showSection(name) {
   if (name==='books') renderBooks();
   if (name==='quotes') renderQuotes();
   if (name==='archive') renderArchive();
-  if (name==='config') updateCfgStatus();
+  if (name==='config') { updateCfgStatus(); updatePwdStatus(); }
 }
 
 function render() { renderStatsBar(); renderTasks(); renderBooks(); renderQuotes(); renderArchive(); updateBadges(); }
