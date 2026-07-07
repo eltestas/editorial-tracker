@@ -212,9 +212,15 @@ label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; colo
 <div class="login-screen" id="login-screen">
   <div class="login-box">
     <div class="login-logo">Editorial <span>Tracker</span></div>
-    <div class="login-sub">Acceso protegido</div>
+    <div class="login-sub" id="login-subtitle">Acceso protegido</div>
+    <div style="font-family:'DM Serif Display',serif;font-size:18px;margin-bottom:20px" id="login-title">Ingresa tu contraseña</div>
     <input id="login-password" type="password" placeholder="Contraseña" onkeydown="if(event.key==='Enter')checkLogin()">
-    <button class="btn btn-primary" onclick="checkLogin()">Entrar</button>
+    <div id="login-confirm-wrap" style="display:none;margin-top:8px">
+      <input id="login-confirm" type="password" placeholder="Confirma tu contraseña" onkeydown="if(event.key==='Enter')checkLogin()">
+    </div>
+    <div style="margin-top:12px">
+      <button class="btn btn-primary" id="login-btn" onclick="checkLogin()">Entrar</button>
+    </div>
     <div class="login-error" id="login-error"></div>
   </div>
 </div>
@@ -580,21 +586,49 @@ function hasPassword() {
   return !!localStorage.getItem(PWD_KEY);
 }
 
+function showLoginScreen() {
+  const screen = document.getElementById('login-screen');
+  const isFirst = !hasPassword();
+  // Update login screen based on whether password exists
+  document.getElementById('login-title').textContent = isFirst ? 'Crear contraseña' : 'Acceso protegido';
+  document.getElementById('login-subtitle').textContent = isFirst ? 'Primera vez — crea tu contraseña de acceso' : 'Ingresa tu contraseña para continuar';
+  document.getElementById('login-confirm-wrap').style.display = isFirst ? '' : 'none';
+  document.getElementById('login-btn').textContent = isFirst ? 'Crear contraseña y entrar' : 'Entrar';
+  document.getElementById('login-error').textContent = '';
+  document.getElementById('login-password').value = '';
+  document.getElementById('login-confirm').value = '';
+  screen.classList.add('visible');
+  setTimeout(() => document.getElementById('login-password').focus(), 100);
+}
+
 async function checkLogin() {
   const pwd = document.getElementById('login-password').value;
   const errEl = document.getElementById('login-error');
-  if (!pwd) { errEl.textContent = 'Escribe tu contraseña.'; return; }
-  const hash = await hashPassword(pwd);
-  const stored = localStorage.getItem(PWD_KEY);
-  if (hash === stored) {
+  if (!pwd) { errEl.textContent = 'Escribe una contraseña.'; return; }
+
+  if (!hasPassword()) {
+    // First time setup
+    const confirm = document.getElementById('login-confirm').value;
+    if (pwd.length < 4) { errEl.textContent = 'Mínimo 4 caracteres.'; return; }
+    if (pwd !== confirm) { errEl.textContent = 'Las contraseñas no coinciden.'; return; }
+    const hash = await hashPassword(pwd);
+    localStorage.setItem(PWD_KEY, hash);
     startSession();
     document.getElementById('login-screen').classList.remove('visible');
-    document.getElementById('login-password').value = '';
-    errEl.textContent = '';
+    updatePwdStatus();
   } else {
-    errEl.textContent = 'Contraseña incorrecta.';
-    document.getElementById('login-password').value = '';
-    document.getElementById('login-password').focus();
+    // Normal login
+    const hash = await hashPassword(pwd);
+    if (hash === localStorage.getItem(PWD_KEY)) {
+      startSession();
+      document.getElementById('login-screen').classList.remove('visible');
+      document.getElementById('login-password').value = '';
+      errEl.textContent = '';
+    } else {
+      errEl.textContent = 'Contraseña incorrecta.';
+      document.getElementById('login-password').value = '';
+      document.getElementById('login-password').focus();
+    }
   }
 }
 
@@ -617,21 +651,19 @@ async function changePassword() {
 
   if (!newPwd) { showResult('La nueva contraseña no puede estar vacía.', false); return; }
   if (newPwd !== confirmPwd) { showResult('Las contraseñas no coinciden.', false); return; }
-  if (newPwd.length < 4) { showResult('La contraseña debe tener al menos 4 caracteres.', false); return; }
+  if (newPwd.length < 4) { showResult('Mínimo 4 caracteres.', false); return; }
 
-  // If there's an existing password, verify current one
   if (hasPassword()) {
     if (!currentPwd) { showResult('Escribe tu contraseña actual primero.', false); return; }
     const currentHash = await hashPassword(currentPwd);
     if (currentHash !== localStorage.getItem(PWD_KEY)) {
-      showResult('La contraseña actual es incorrecta.', false);
-      return;
+      showResult('La contraseña actual es incorrecta.', false); return;
     }
   }
 
   const newHash = await hashPassword(newPwd);
   localStorage.setItem(PWD_KEY, newHash);
-  startSession(); // keep session active after change
+  startSession();
   currentEl.value = ''; newEl.value = ''; confirmEl.value = '';
   showResult('✓ Contraseña guardada correctamente.', true);
   updatePwdStatus();
@@ -646,26 +678,31 @@ function updatePwdStatus() {
     if (currentLabel) currentLabel.textContent = 'Contraseña actual';
   } else {
     setupMsg.style.display = '';
-    if (currentLabel) currentLabel.textContent = 'Contraseña actual (dejar vacío si es la primera vez)';
+    if (currentLabel) currentLabel.textContent = 'Contraseña actual';
   }
 }
 
 function initAuth() {
-  if (!hasPassword()) {
-    // No password set yet — let them in but show warning in config
-    return;
-  }
+  // Always show login — either to create password or to enter it
   if (!isSessionValid()) {
-    document.getElementById('login-screen').classList.add('visible');
-    setTimeout(() => document.getElementById('login-password').focus(), 100);
+    showLoginScreen();
   }
 }
 
 /* ── GIST SYNC ── */
 const CFG_KEY = 'editorial_gist_config';
 
+// Credenciales fijas — edita estas dos líneas con tus datos
+const HARDCODED_GIST_ID = 'f1645ce1370bd7212915e0d0a401df88';   // <-- pega aquí tu Gist ID
+const HARDCODED_TOKEN   = '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';   // <-- pega aquí tu token de GitHub
+
 function getConfig() {
-  try { return JSON.parse(localStorage.getItem(CFG_KEY)||'{}'); } catch(e) { return {}; }
+  // Hardcoded credentials take priority; fall back to localStorage
+  const stored = (() => { try { return JSON.parse(localStorage.getItem(CFG_KEY)||'{}'); } catch(e) { return {}; } })();
+  return {
+    gistId: HARDCODED_GIST_ID || stored.gistId || '',
+    token:  HARDCODED_TOKEN   || stored.token  || ''
+  };
 }
 function gistConfigured() {
   const c = getConfig(); return !!(c.gistId && c.token);
