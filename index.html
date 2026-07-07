@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Editorial Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #1a1611; --paper: #f5f0e8; --paper2: #ede7d9; --paper3: #e3dccf;
+  --accent: #c0392b; --accent2: #8b6914; --green: #2d6a4f; --red: #c0392b;
+  --border: rgba(26,22,17,0.15); --shadow: 0 2px 12px rgba(26,22,17,0.1); --radius: 4px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); min-height: 100vh; font-size: 14px; }
+
+/* Header */
+.header { background: var(--ink); color: var(--paper); padding: 14px 32px; display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid var(--accent); position: sticky; top: 0; z-index: 50; }
+.header-title { font-family: 'DM Serif Display', serif; font-size: 22px; letter-spacing: 0.02em; }
+.header-title span { color: var(--accent); font-style: italic; }
+.header-date { font-size: 12px; color: rgba(245,240,232,0.5); letter-spacing: 0.05em; text-transform: uppercase; }
+
+/* Stats bar */
+.stats-bar { background: var(--paper2); border-bottom: 1px solid var(--border); padding: 0 32px; display: flex; align-items: stretch; position: sticky; top: 57px; z-index: 40; box-shadow: 0 2px 8px rgba(26,22,17,0.07); }
+.stat-item { display: flex; flex-direction: column; justify-content: center; padding: 10px 24px 10px 0; margin-right: 24px; border-right: 1px solid var(--border); }
+.stat-item:last-child { border-right: none; margin-right: 0; }
+.stat-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.09em; color: rgba(26,22,17,0.4); margin-bottom: 2px; }
+.stat-val { font-family: 'DM Serif Display', serif; font-size: 17px; line-height: 1; }
+
+/* Layout */
+.layout { display: grid; grid-template-columns: 220px 1fr; min-height: calc(100vh - 100px); }
+.sidebar { background: var(--ink); color: var(--paper); padding: 24px 0; display: flex; flex-direction: column; gap: 2px; position: sticky; top: 100px; height: calc(100vh - 100px); overflow-y: auto; }
+.nav-item { padding: 10px 24px; cursor: pointer; font-size: 13px; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; color: rgba(245,240,232,0.5); border-left: 3px solid transparent; transition: all 0.15s; display: flex; align-items: center; gap: 10px; }
+.nav-item:hover { color: var(--paper); background: rgba(245,240,232,0.05); }
+.nav-item.active { color: var(--paper); border-left-color: var(--accent); background: rgba(245,240,232,0.07); }
+.nav-icon { font-size: 16px; width: 18px; text-align: center; }
+.sidebar-divider { height: 1px; background: rgba(245,240,232,0.1); margin: 12px 24px; }
+.sidebar-label { padding: 4px 24px; font-size: 10px; color: rgba(245,240,232,0.3); letter-spacing: 0.1em; text-transform: uppercase; }
+.nav-badge { margin-left: auto; background: var(--accent); color: white; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px; }
+
+.main { padding: 28px 32px; overflow-y: auto; }
+.section { display: none; }
+.section.active { display: block; }
+
+/* Section header */
+.section-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.section-title { font-family: 'DM Serif Display', serif; font-size: 20px; }
+.section-sub { font-size: 12px; color: rgba(26,22,17,0.4); }
+
+/* Task cards */
+.task-card { background: white; border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 10px; display: grid; grid-template-columns: 4px 1fr; overflow: hidden; box-shadow: var(--shadow); }
+.task-stripe { background: var(--accent); }
+.task-body { padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.task-left { flex: 1; }
+.task-title-row { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.task-book { font-weight: 600; font-size: 14px; }
+.task-author { font-size: 12px; color: rgba(26,22,17,0.4); }
+.task-action { font-size: 13px; color: rgba(26,22,17,0.6); }
+.task-num { font-family: 'DM Serif Display', serif; font-size: 28px; color: rgba(26,22,17,0.08); line-height: 1; }
+
+/* Badges */
+.badge { font-size: 10px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; padding: 3px 8px; border-radius: 2px; white-space: nowrap; }
+.badge-stage { background: var(--paper2); color: var(--ink); }
+.badge-overdue { background: #fde8e8; color: var(--red); }
+.badge-soon { background: #fef3cd; color: #856404; }
+.badge-ok { background: #d4edda; color: #155724; }
+.badge-paid { background: #d4edda; color: #155724; }
+.badge-owed { background: #fde8e8; color: var(--red); }
+.badge-clear { background: var(--paper2); color: rgba(26,22,17,0.5); }
+.badge-quote { background: #e8f0fe; color: #1a56b0; }
+.badge-archived { background: #f0ede8; color: rgba(26,22,17,0.4); }
+
+/* Book cards */
+.book-card { background: white; border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 14px; box-shadow: var(--shadow); overflow: hidden; }
+.book-card-header { padding: 14px 18px; display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: start; border-bottom: 1px solid var(--border); background: var(--paper); }
+.book-card.archived .book-card-header { background: #f8f6f2; opacity: 0.75; }
+.book-name { font-family: 'DM Serif Display', serif; font-size: 17px; }
+.book-author-line { font-size: 12px; color: rgba(26,22,17,0.45); margin-top: 2px; }
+.book-controls { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.book-body { padding: 14px 18px; }
+.book-notes { font-size: 12px; color: rgba(26,22,17,0.45); font-style: italic; margin-top: 4px; }
+
+/* Quote cards */
+.quote-card { background: white; border: 1px solid var(--border); border-left: 4px solid #4a7fc1; border-radius: var(--radius); margin-bottom: 14px; box-shadow: var(--shadow); overflow: hidden; }
+.quote-card-header { padding: 14px 18px; display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: start; border-bottom: 1px solid var(--border); background: #f5f8ff; }
+.quote-body { padding: 14px 18px; }
+.client-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.client-field { background: var(--paper); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; }
+.client-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; color: rgba(26,22,17,0.4); margin-bottom: 4px; }
+.client-val { font-size: 14px; font-weight: 500; }
+
+/* Fin grid */
+.fin-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin: 12px 0; }
+.fin-cell { background: var(--paper); padding: 12px 14px; }
+.fin-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; color: rgba(26,22,17,0.4); margin-bottom: 6px; }
+.fin-val { font-family: 'DM Serif Display', serif; font-size: 18px; }
+.fin-sub { font-size: 11px; color: rgba(26,22,17,0.4); margin-top: 3px; }
+
+/* Archived section divider */
+.archive-divider { display: flex; align-items: center; gap: 12px; margin: 24px 0 16px; cursor: pointer; user-select: none; }
+.archive-divider-line { flex: 1; height: 1px; background: var(--border); }
+.archive-divider-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: rgba(26,22,17,0.35); white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+
+/* Buttons */
+.btn { font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; padding: 6px 12px; border-radius: var(--radius); cursor: pointer; border: 1px solid var(--border); background: white; color: var(--ink); transition: all 0.12s; }
+.btn:hover { background: var(--paper2); }
+.btn-primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.btn-primary:hover { background: #2d2820; }
+.btn-approve { background: #2d6a4f; color: white; border-color: #2d6a4f; }
+.btn-approve:hover { background: #1e4d39; }
+.btn-archive { background: none; border: 1px solid var(--border); color: rgba(26,22,17,0.45); font-size: 12px; cursor: pointer; padding: 4px 10px; border-radius: var(--radius); font-family: 'DM Sans', sans-serif; }
+.btn-archive:hover { background: #f0ede8; color: var(--ink); }
+.btn-unarchive { background: none; border: 1px solid var(--border); color: rgba(26,22,17,0.4); font-size: 12px; cursor: pointer; padding: 4px 10px; border-radius: var(--radius); font-family: 'DM Sans', sans-serif; }
+.btn-unarchive:hover { background: var(--paper2); color: var(--ink); }
+.btn-danger { background: none; border: none; color: rgba(26,22,17,0.3); cursor: pointer; font-size: 15px; padding: 4px; }
+.btn-danger:hover { color: var(--red); }
+.btn-icon { background: none; border: 1px solid var(--border); color: rgba(26,22,17,0.5); cursor: pointer; font-size: 13px; padding: 4px 7px; border-radius: var(--radius); }
+.btn-icon:hover { background: var(--paper2); color: var(--ink); }
+
+.pri-wrap { display: flex; align-items: center; gap: 4px; }
+.pri-btn { width: 24px; height: 24px; border: 1px solid var(--border); border-radius: var(--radius); background: white; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; color: rgba(26,22,17,0.5); }
+.pri-btn:hover { background: var(--paper2); }
+.pri-num { font-family: 'DM Serif Display', serif; font-size: 18px; color: rgba(26,22,17,0.2); min-width: 22px; text-align: center; line-height: 1; }
+.stage-sel { font-family: 'DM Sans', sans-serif; font-size: 12px; padding: 4px 6px; border: 1px solid var(--border); border-radius: var(--radius); background: white; color: var(--ink); cursor: pointer; }
+
+/* Transactions */
+.tx-toggle { font-size: 12px; color: rgba(26,22,17,0.45); background: none; border: none; cursor: pointer; padding: 2px 0; }
+.tx-toggle:hover { color: var(--ink); }
+.tx-list { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 8px; }
+.tx-row { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; padding: 6px 0; border-bottom: 1px solid rgba(26,22,17,0.06); font-size: 13px; }
+.tx-row:last-of-type { border-bottom: none; }
+.add-tx-row { display: grid; grid-template-columns: 1fr 110px 90px auto; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); }
+
+/* Notes log */
+.notes-toggle { font-size: 12px; color: rgba(26,22,17,0.45); background: none; border: none; cursor: pointer; padding: 2px 0; margin-left: 14px; }
+.notes-toggle:hover { color: var(--ink); }
+.notes-list { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 8px; }
+.note-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: start; padding: 8px 0; border-bottom: 1px solid rgba(26,22,17,0.06); }
+.note-row:last-of-type { border-bottom: none; }
+.note-meta { font-size: 10px; color: rgba(26,22,17,0.35); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; }
+.note-text { font-size: 13px; color: var(--ink); line-height: 1.5; white-space: pre-wrap; }
+.add-note-row { display: grid; grid-template-columns: 1fr auto; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); align-items: end; }
+.add-note-row textarea { font-family: 'DM Sans', sans-serif; font-size: 13px; width: 100%; padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--radius); background: white; color: var(--ink); outline: none; resize: vertical; min-height: 60px; line-height: 1.5; }
+.add-note-row textarea:focus { border-color: var(--accent2); }
+.note-link { display: inline-block; margin-top: 4px; font-size: 12px; color: #1a56b0; text-decoration: none; word-break: break-all; }
+.note-link:hover { text-decoration: underline; }
+
+/* Custom tasks */
+.custom-tasks-section { margin-top: 28px; }
+.custom-tasks-header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid var(--border); margin-bottom: 14px; }
+.custom-tasks-title { font-family: 'DM Serif Display', serif; font-size: 17px; }
+.custom-task-item { background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; box-shadow: 0 1px 4px rgba(26,22,17,0.06); }
+.custom-task-item.archived-task { background: var(--paper); opacity: 0.6; }
+.custom-task-check { width: 16px; height: 16px; border: 1.5px solid var(--border); border-radius: 3px; cursor: pointer; flex-shrink: 0; appearance: none; background: white; }
+.custom-task-check:checked { background: var(--ink); border-color: var(--ink); background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 10 8' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 4l3 3 5-6' stroke='white' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-size: 10px; background-repeat: no-repeat; background-position: center; }
+.custom-task-text { flex: 1; font-size: 13px; line-height: 1.5; }
+.custom-task-text.done { text-decoration: line-through; color: rgba(26,22,17,0.35); }
+.custom-task-body { flex: 1; }
+.custom-task-link { font-size: 11px; color: #1a56b0; text-decoration: none; display: block; margin-top: 2px; word-break: break-all; }
+.custom-task-link:hover { text-decoration: underline; }
+.add-custom-task { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 10px; align-items: end; }
+.archived-tasks-toggle { font-size: 12px; color: rgba(26,22,17,0.4); background: none; border: none; cursor: pointer; padding: 6px 0; margin-top: 8px; display: block; }
+.archived-tasks-toggle:hover { color: var(--ink); }
+.archived-tasks-list { margin-top: 8px; padding: 12px 14px; background: var(--paper2); border-radius: var(--radius); border: 1px solid var(--border); }
+.archived-task-row { display: flex; align-items: center; gap: 10px; padding: 5px 0; border-bottom: 1px solid rgba(26,22,17,0.06); font-size: 13px; }
+.archived-task-row:last-child { border-bottom: none; }
+.archived-task-date { font-size: 10px; color: rgba(26,22,17,0.35); white-space: nowrap; }
+
+input, select { font-family: 'DM Sans', sans-serif; font-size: 13px; width: 100%; padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--radius); background: white; color: var(--ink); outline: none; }
+input:focus, select:focus { border-color: var(--accent2); }
+label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: rgba(26,22,17,0.45); display: block; margin-bottom: 5px; }
+
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.form-full { grid-column: 1 / -1; }
+.form-card { background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); max-width: 680px; }
+.form-section-title { font-family: 'DM Serif Display', serif; font-size: 15px; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); color: rgba(26,22,17,0.6); }
+
+.edit-form { padding: 14px 18px; background: var(--paper); border-bottom: 1px solid var(--border); display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.edit-form-full { grid-column: 1 / -1; }
+.quoted-edit { display: flex; gap: 6px; align-items: center; }
+.quoted-edit input { width: 120px; }
+.empty { text-align: center; padding: 48px 0; color: rgba(26,22,17,0.3); font-size: 14px; }
+.empty-icon { font-size: 36px; margin-bottom: 10px; }
+
+.stripe-0{background:#c0392b}.stripe-1{background:#2d6a4f}.stripe-2{background:#8b6914}
+.stripe-3{background:#185FA5}.stripe-4{background:#7b3f9e}.stripe-5{background:#c0712b}.stripe-6{background:#1a6e7a}
+
+/* Modal */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(26,22,17,0.5); z-index: 100; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal { background: white; border-radius: var(--radius); padding: 28px; max-width: 460px; width: 90%; box-shadow: 0 8px 40px rgba(26,22,17,0.25); }
+.modal-title { font-family: 'DM Serif Display', serif; font-size: 20px; margin-bottom: 8px; }
+.modal-sub { font-size: 13px; color: rgba(26,22,17,0.5); margin-bottom: 20px; }
+.modal-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-title">Editorial <span>Tracker</span></div>
+  <div class="header-date" id="header-date"></div>
+</div>
+
+<div class="stats-bar">
+  <div class="stat-item"><div class="stat-label">Libros activos</div><div class="stat-val" id="sb-books">0</div></div>
+  <div class="stat-item"><div class="stat-label">Total contratado</div><div class="stat-val" id="sb-quoted">—</div></div>
+  <div class="stat-item"><div class="stat-label">Cobrado</div><div class="stat-val" style="color:var(--green)" id="sb-collected">—</div></div>
+  <div class="stat-item"><div class="stat-label">Por cobrar</div><div class="stat-val" id="sb-owed">—</div></div>
+  <div class="stat-item" style="margin-left:auto;border-right:none">
+    <div class="stat-label">Sincronización</div>
+    <div class="stat-val" id="sync-status" style="font-size:13px;font-family:'DM Sans',sans-serif">—</div>
+  </div>
+</div>
+
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-label">Vistas</div>
+    <div class="nav-item active" onclick="showSection('tasks')" id="nav-tasks"><span class="nav-icon">☑</span> Tareas de hoy</div>
+    <div class="nav-item" onclick="showSection('books')" id="nav-books"><span class="nav-icon">📚</span> Todos los libros</div>
+    <div class="nav-item" onclick="showSection('quotes')" id="nav-quotes">
+      <span class="nav-icon">📋</span> Libros cotizados
+      <span class="nav-badge" id="quotes-badge" style="display:none">0</span>
+    </div>
+    <div class="nav-item" onclick="showSection('archive')" id="nav-archive">
+      <span class="nav-icon">🗄</span> Archivo
+      <span class="nav-badge" id="archive-badge" style="display:none;background:#888">0</span>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-label">Acciones</div>
+    <div class="nav-item" onclick="showSection('add-book')" id="nav-add-book"><span class="nav-icon">＋</span> Agregar libro</div>
+    <div class="nav-item" onclick="showSection('add-quote')" id="nav-add-quote"><span class="nav-icon">✉</span> Nueva cotización</div>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-label">Datos</div>
+    <div class="nav-item" onclick="showSection('data')" id="nav-data"><span class="nav-icon">⇅</span> Exportar / Importar</div>
+    <div class="nav-item" onclick="showSection('config')" id="nav-config"><span class="nav-icon">☁</span> Configuración</div>
+  </nav>
+
+  <main class="main">
+
+    <!-- TASKS -->
+    <div class="section active" id="section-tasks">
+      <div class="section-header">
+        <div class="section-title">Lista de tareas</div>
+        <div class="section-sub" id="today-label"></div>
+      </div>
+      <div id="task-list"></div>
+      <div class="custom-tasks-section">
+        <div class="custom-tasks-header">
+          <div class="custom-tasks-title">Tareas personalizadas</div>
+        </div>
+        <div id="custom-task-list"></div>
+        <div class="add-custom-task">
+          <div><label>Nueva tarea</label><input id="ct-text" type="text" placeholder="Descripción (pega un enlace y se detecta automáticamente)" onkeydown="if(event.key==='Enter')addCustomTask()"></div>
+          <button class="btn btn-primary" onclick="addCustomTask()" style="margin-bottom:1px">＋ Agregar</button>
+        </div>
+        <div id="archived-tasks-section"></div>
+      </div>
+    </div>
+
+    <!-- ALL BOOKS -->
+    <div class="section" id="section-books">
+      <div class="section-header">
+        <div class="section-title">Todos los libros</div>
+        <div class="section-sub" id="books-count"></div>
+      </div>
+      <div id="book-list"></div>
+    </div>
+
+    <!-- QUOTES -->
+    <div class="section" id="section-quotes">
+      <div class="section-header">
+        <div class="section-title">Libros cotizados</div>
+        <div class="section-sub" id="quotes-count"></div>
+      </div>
+      <div id="quotes-summary"></div>
+      <div id="quote-list"></div>
+    </div>
+
+    <!-- ARCHIVE -->
+    <div class="section" id="section-archive">
+      <div class="section-header">
+        <div class="section-title">Archivo</div>
+        <div class="section-sub" id="archive-count"></div>
+      </div>
+      <div id="archive-list"></div>
+    </div>
+
+    <!-- ADD BOOK -->
+    <div class="section" id="section-add-book">
+      <div class="section-header">
+        <div class="section-title">Agregar libro activo</div>
+        <div class="section-sub">Libro ya aprobado y en producción</div>
+      </div>
+      <div class="form-card">
+        <div class="form-grid">
+          <div><label>Título</label><input id="nb-title" type="text" placeholder="Título del libro"></div>
+          <div><label>Autor</label><input id="nb-author" type="text" placeholder="Nombre del autor"></div>
+          <div><label>Etapa actual</label>
+            <select id="nb-stage">
+              <option>Quoting</option><option>Design & layout</option><option>ISBN assigning</option>
+              <option>Proofreading</option><option>Print approval</option><option>Printing</option><option>Delivery</option>
+            </select>
+          </div>
+          <div><label>Fecha límite de impresión</label><input id="nb-deadline" type="date"></div>
+          <div><label>Total cotizado ($)</label><input id="nb-budget" type="number" placeholder="0.00" min="0" step="0.01"></div>
+          <div><label>Cantidad de ejemplares</label><input id="nb-copies" type="number" placeholder="0" min="0" step="1"></div>
+          <div><label>Notas</label><input id="nb-notes" type="text" placeholder="Notas opcionales"></div>
+          <div class="form-full"><button class="btn btn-primary" onclick="addBook()">＋ Agregar libro</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADD QUOTE -->
+    <div class="section" id="section-add-quote">
+      <div class="section-header">
+        <div class="section-title">Nueva cotización</div>
+        <div class="section-sub">Libro cotizado pendiente de aprobación</div>
+      </div>
+      <div class="form-card">
+        <div class="form-section-title">Datos del libro</div>
+        <div class="form-grid">
+          <div><label>Título</label><input id="nq-title" type="text" placeholder="Título del libro"></div>
+          <div><label>Autor</label><input id="nq-author" type="text" placeholder="Nombre del autor"></div>
+          <div><label>Monto cotizado ($)</label><input id="nq-amount" type="number" placeholder="0.00" min="0" step="0.01"></div>
+          <div><label>Cantidad de ejemplares</label><input id="nq-copies" type="number" placeholder="0" min="0" step="1"></div>
+          <div><label>Fecha de cotización</label><input id="nq-date" type="date"></div>
+          <div class="form-full"><label>Notas</label><input id="nq-notes" type="text" placeholder="Notas opcionales"></div>
+        </div>
+        <br>
+        <div class="form-section-title">Datos del cliente</div>
+        <div class="form-grid">
+          <div><label>Nombre del cliente</label><input id="nq-client-name" type="text" placeholder="Nombre o empresa"></div>
+          <div><label>Contacto</label><input id="nq-client-contact" type="text" placeholder="Nombre del contacto"></div>
+          <div><label>Email</label><input id="nq-client-email" type="email" placeholder="correo@ejemplo.com"></div>
+          <div><label>Teléfono</label><input id="nq-client-phone" type="text" placeholder="+52..."></div>
+          <div class="form-full"><label>Notas del cliente</label><input id="nq-client-notes" type="text" placeholder="Notas adicionales"></div>
+        </div>
+        <br>
+        <button class="btn btn-primary" onclick="addQuote()">＋ Guardar cotización</button>
+      </div>
+    </div>
+
+    <!-- EXPORT / IMPORT -->
+    <div class="section" id="section-data">
+      <div class="section-header">
+        <div class="section-title">Exportar / Importar</div>
+        <div class="section-sub">Respaldo completo de todos tus datos</div>
+      </div>
+
+      <!-- Export -->
+      <div class="form-card" style="margin-bottom:20px">
+        <div class="form-section-title">📤 Exportar a CSV</div>
+        <p style="font-size:13px;color:rgba(26,22,17,0.6);margin-bottom:16px;line-height:1.6">
+          Genera archivos CSV separados para cada tipo de datos. Puedes abrirlos en Excel, Google Sheets, o cualquier hoja de cálculo.
+        </p>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+          <div style="border:1px solid var(--border);border-radius:var(--radius);padding:14px">
+            <div style="font-size:12px;font-weight:600;margin-bottom:4px">📚 Libros activos</div>
+            <div style="font-size:12px;color:rgba(26,22,17,0.5);margin-bottom:12px">Título, autor, etapa, fechas, financieros, transacciones y notas</div>
+            <button class="btn btn-primary" onclick="exportBooks()" style="width:100%">Descargar libros.csv</button>
+          </div>
+          <div style="border:1px solid var(--border);border-radius:var(--radius);padding:14px">
+            <div style="font-size:12px;font-weight:600;margin-bottom:4px">📋 Cotizaciones</div>
+            <div style="font-size:12px;color:rgba(26,22,17,0.5);margin-bottom:12px">Título, cliente, contacto, monto cotizado y notas</div>
+            <button class="btn btn-primary" onclick="exportQuotes()" style="width:100%">Descargar cotizaciones.csv</button>
+          </div>
+          <div style="border:1px solid var(--border);border-radius:var(--radius);padding:14px">
+            <div style="font-size:12px;font-weight:600;margin-bottom:4px">🗄 Libros archivados</div>
+            <div style="font-size:12px;color:rgba(26,22,17,0.5);margin-bottom:12px">Mismo formato que libros activos, con fecha de archivado</div>
+            <button class="btn btn-primary" onclick="exportArchived()" style="width:100%">Descargar archivados.csv</button>
+          </div>
+        </div>
+        <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:14px">
+          <button class="btn" onclick="exportAll()" style="font-size:13px">⬇ Exportar todo en un solo archivo</button>
+          <span style="font-size:12px;color:rgba(26,22,17,0.4);margin-left:10px">Genera un CSV con todas las secciones separadas por encabezados</span>
+        </div>
+      </div>
+
+      <!-- Import -->
+      <div class="form-card">
+        <div class="form-section-title">📥 Importar desde CSV</div>
+        <p style="font-size:13px;color:rgba(26,22,17,0.6);margin-bottom:4px;line-height:1.6">
+          Importa un archivo CSV exportado previamente. Puedes elegir si <strong>reemplazar</strong> todos los datos actuales o <strong>combinar</strong> con los existentes.
+        </p>
+        <p style="font-size:12px;color:var(--red);margin-bottom:16px">⚠ Se recomienda exportar primero como respaldo antes de importar.</p>
+        <div style="display:grid;gap:14px">
+          <div>
+            <label>Selecciona el archivo CSV</label>
+            <input type="file" id="import-file" accept=".csv" style="cursor:pointer">
+          </div>
+          <div style="display:flex;gap:10px;align-items:center">
+            <label style="display:flex;align-items:center;gap:6px;text-transform:none;font-size:13px;letter-spacing:0;cursor:pointer">
+              <input type="radio" name="import-mode" value="merge" checked style="width:auto"> Combinar con datos existentes
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;text-transform:none;font-size:13px;letter-spacing:0;cursor:pointer">
+              <input type="radio" name="import-mode" value="replace" style="width:auto"> Reemplazar todo
+            </label>
+          </div>
+          <div>
+            <button class="btn btn-primary" onclick="importCSV()">📥 Importar</button>
+          </div>
+          <div id="import-result" style="font-size:13px;display:none"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONFIG -->
+    <div class="section" id="section-config">
+      <div class="section-header">
+        <div class="section-title">Configuración</div>
+        <div class="section-sub">Sincronización con GitHub Gist</div>
+      </div>
+      <div class="form-card" style="max-width:560px">
+        <div class="form-section-title">☁ GitHub Gist</div>
+        <p style="font-size:13px;color:rgba(26,22,17,0.6);line-height:1.6;margin-bottom:16px">
+          Tus datos se guardarán en tu Gist privado cada vez que hagas un cambio, y se cargarán desde ahí al abrir el tracker. El token se guarda solo en este navegador.
+        </p>
+        <div style="display:grid;gap:12px">
+          <div>
+            <label>Gist ID</label>
+            <input id="cfg-gist-id" type="text" placeholder="a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4">
+          </div>
+          <div>
+            <label>Token de GitHub</label>
+            <input id="cfg-token" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+            <div style="font-size:11px;color:rgba(26,22,17,0.4);margin-top:4px">Se guarda localmente en este navegador. Nunca se envía a ningún servidor externo.</div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="saveConfig()">💾 Guardar configuración</button>
+            <button class="btn" onclick="syncFromGist()">⬇ Cargar desde Gist</button>
+            <button class="btn" onclick="syncToGist(true)">⬆ Subir a Gist ahora</button>
+          </div>
+          <div id="cfg-result" style="font-size:13px;display:none;padding:10px;border-radius:var(--radius);border:1px solid var(--border)"></div>
+          <div style="padding-top:8px;border-top:1px solid var(--border)">
+            <div style="font-size:12px;font-weight:600;margin-bottom:6px">Estado actual</div>
+            <div id="cfg-status" style="font-size:13px;color:rgba(26,22,17,0.5)">Sin configurar</div>
+          </div>
+          <div style="padding-top:8px;border-top:1px solid var(--border)">
+            <button class="btn" onclick="if(confirm('¿Borrar la configuración del Gist? Los datos locales no se eliminan.')){clearConfig()}" style="font-size:11px;color:var(--red);border-color:var(--red)">✕ Borrar configuración</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Approve modal -->
+<div class="modal-overlay" id="approve-modal">
+  <div class="modal">
+    <div class="modal-title">✓ Aprobar cotización</div>
+    <div class="modal-sub" id="approve-modal-sub"></div>
+    <p style="font-size:13px;color:rgba(26,22,17,0.7);line-height:1.6">Al aprobar, este libro pasará a <strong>Todos los libros</strong> y comenzará a sumarse en los totales financieros.</p>
+    <div class="form-grid" style="margin-top:16px">
+      <div><label>Etapa inicial</label>
+        <select id="approve-stage">
+          <option>Quoting</option><option selected>Design & layout</option><option>ISBN assigning</option>
+          <option>Proofreading</option><option>Print approval</option><option>Printing</option><option>Delivery</option>
+        </select>
+      </div>
+      <div><label>Fecha límite de impresión</label><input id="approve-deadline" type="date"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeApproveModal()">Cancelar</button>
+      <button class="btn btn-approve" onclick="confirmApprove()">✓ Confirmar aprobación</button>
+    </div>
+  </div>
+</div>
+
+<!-- Archive confirm modal -->
+<div class="modal-overlay" id="archive-modal">
+  <div class="modal">
+    <div class="modal-title">🗄 Archivar libro</div>
+    <div class="modal-sub" id="archive-modal-sub"></div>
+    <p style="font-size:13px;color:rgba(26,22,17,0.7);line-height:1.6">
+      Al archivar, este libro dejará de aparecer en <strong>Todos los libros</strong> y <strong>Tareas de hoy</strong>, y <strong>no se sumará</strong> en los totales financieros. Puedes consultarlo en la sección <strong>Archivo</strong> y reactivarlo cuando quieras.
+    </p>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeArchiveModal()">Cancelar</button>
+      <button class="btn" style="background:#555;color:white;border-color:#555" onclick="confirmArchive()">🗄 Archivar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STAGES = ['Quoting','Design & layout','ISBN assigning','Proofreading','Print approval','Printing','Delivery'];
+const STAGE_TASKS = {
+  'Quoting':'Enviar y finalizar cotización al cliente',
+  'Design & layout':'Revisar y aprobar pruebas de diseño y maquetación',
+  'ISBN assigning':'Asignar ISBN y registrar metadatos del libro',
+  'Proofreading':'Completar corrección de pruebas y devolver correcciones',
+  'Print approval':'Obtener firma de aprobación final para impresión',
+  'Printing':'Confirmar que la tirada de impresión está en proceso',
+  'Delivery':'Coordinar logística y entrega al cliente'
+};
+const STRIPE = ['stripe-0','stripe-1','stripe-2','stripe-3','stripe-4','stripe-5','stripe-6'];
+const SK = 'editorial_tracker_v1';
+const QK = 'editorial_quotes_v1';
+
+let books = [], quotes = [];
+let openFin = {}, editingFin = {}, editingDetails = {}, editingQuoteDetails = {}, openNotes = {};
+let approveId = null, archiveId = null;
+let showArchivedInBooks = false;
+
+/* ── GIST SYNC ── */
+const CFG_KEY = 'editorial_gist_config';
+
+function getConfig() {
+  try { return JSON.parse(localStorage.getItem(CFG_KEY)||'{}'); } catch(e) { return {}; }
+}
+function gistConfigured() {
+  const c = getConfig(); return !!(c.gistId && c.token);
+}
+function setSyncStatus(msg, color) {
+  const el = document.getElementById('sync-status');
+  if (el) { el.textContent = msg; el.style.color = color||'inherit'; }
+}
+function setCfgResult(msg, ok) {
+  const el = document.getElementById('cfg-result');
+  if (!el) return;
+  el.style.display = '';
+  el.style.background = ok ? '#eaf6ee' : '#fde8e8';
+  el.style.color = ok ? 'var(--green)' : 'var(--red)';
+  el.textContent = msg;
+}
+
+async function syncToGist(manual) {
+  if (!gistConfigured()) {
+    if (manual) setCfgResult('⚠ Configura el Gist ID y token primero.', false);
+    return;
+  }
+  const {gistId, token} = getConfig();
+  setSyncStatus('Guardando…', 'var(--accent2)');
+  try {
+    const payload = { books, quotes };
+    const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ files: { 'data.json': { content: JSON.stringify(payload, null, 2) } } })
+    });
+    if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`);
+    const now = new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+    setSyncStatus(`☁ ${now}`, 'var(--green)');
+    if (manual) setCfgResult(`✓ Datos subidos correctamente a las ${now}.`, true);
+  } catch(e) {
+    setSyncStatus('⚠ Error', 'var(--red)');
+    if (manual) setCfgResult(`✗ Error al subir: ${e.message}`, false);
+  }
+}
+
+async function syncFromGist() {
+  if (!gistConfigured()) { setCfgResult('⚠ Configura el Gist ID y token primero.', false); return; }
+  const {gistId, token} = getConfig();
+  setSyncStatus('Cargando…', 'var(--accent2)');
+  try {
+    const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+      headers: { 'Authorization': `token ${token}` }
+    });
+    if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`);
+    const data = await res.json();
+    const content = data.files?.['data.json']?.content;
+    if (!content) throw new Error('No se encontró data.json en el Gist');
+    const parsed = JSON.parse(content);
+    if (parsed.books) books = parsed.books;
+    if (parsed.quotes) quotes = parsed.quotes;
+    // also save locally as backup
+    try { localStorage.setItem(SK, JSON.stringify(books)); } catch(e) {}
+    try { localStorage.setItem(QK, JSON.stringify(quotes)); } catch(e) {}
+    render();
+    const now = new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+    setSyncStatus(`☁ ${now}`, 'var(--green)');
+    setCfgResult(`✓ Datos cargados correctamente (${books.length} libros, ${quotes.length} cotizaciones).`, true);
+  } catch(e) {
+    setSyncStatus('⚠ Error', 'var(--red)');
+    setCfgResult(`✗ Error al cargar: ${e.message}`, false);
+  }
+}
+
+function saveConfig() {
+  const gistId = document.getElementById('cfg-gist-id').value.trim();
+  const token = document.getElementById('cfg-token').value.trim();
+  if (!gistId || !token) { setCfgResult('⚠ Completa ambos campos.', false); return; }
+  localStorage.setItem(CFG_KEY, JSON.stringify({gistId, token}));
+  updateCfgStatus();
+  setCfgResult('✓ Configuración guardada. Probando conexión…', true);
+  syncFromGist();
+}
+
+function clearConfig() {
+  localStorage.removeItem(CFG_KEY);
+  document.getElementById('cfg-gist-id').value = '';
+  document.getElementById('cfg-token').value = '';
+  updateCfgStatus();
+  setSyncStatus('Sin nube', 'rgba(26,22,17,0.3)');
+}
+
+function updateCfgStatus() {
+  const el = document.getElementById('cfg-status');
+  if (!el) return;
+  const c = getConfig();
+  if (c.gistId && c.token) {
+    el.innerHTML = `<span style="color:var(--green)">✓ Configurado</span> — Gist ID: <code style="font-size:12px;background:var(--paper2);padding:1px 5px;border-radius:3px">${c.gistId.slice(0,8)}…</code>`;
+    document.getElementById('cfg-gist-id').value = c.gistId;
+    // don't prefill token for security
+  } else {
+    el.textContent = 'Sin configurar — los datos solo se guardan localmente.';
+  }
+}
+
+function save() {
+  // Always save locally first
+  try { localStorage.setItem(SK, JSON.stringify(books)); } catch(e) {}
+  try { localStorage.setItem(QK, JSON.stringify(quotes)); } catch(e) {}
+  // Then sync to Gist if configured (debounced)
+  if (gistConfigured()) {
+    clearTimeout(window._gistSaveTimer);
+    setSyncStatus('Pendiente…', 'var(--accent2)');
+    window._gistSaveTimer = setTimeout(() => syncToGist(false), 1500);
+  }
+}
+
+function load() {
+  try { const r = localStorage.getItem(SK); if (r) books = JSON.parse(r); } catch(e) { books = []; }
+  try { const r = localStorage.getItem(QK); if (r) quotes = JSON.parse(r); } catch(e) { quotes = []; }
+  loadCustomTasks();
+  render();
+  // If Gist configured, load from cloud (cloud takes priority)
+  if (gistConfigured()) {
+    setSyncStatus('Cargando…', 'var(--accent2)');
+    syncFromGist().catch(()=>{});
+  } else {
+    setSyncStatus('Sin nube', 'rgba(26,22,17,0.3)');
+  }
+  // Populate config fields if already set
+  setTimeout(updateCfgStatus, 100);
+}
+
+const fmt = n => new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN',minimumFractionDigits:2}).format(n||0);
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+function daysUntil(d) { if(!d) return null; return Math.ceil((new Date(d)-new Date())/(1000*60*60*24)); }
+function urgency(b) {
+  const d = daysUntil(b.deadline);
+  if (d===null) return {text:'Sin fecha',cls:''};
+  if (d<0) return {text:'Vencido',cls:'badge-overdue'};
+  if (d<=3) return {text:d+'d restantes',cls:'badge-overdue'};
+  if (d<=7) return {text:d+'d restantes',cls:'badge-soon'};
+  return {text:d+'d restantes',cls:'badge-ok'};
+}
+function collected(b) { return (b.transactions||[]).filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0); }
+function owes(b) { return Math.max(0,(b.quoted||0)-collected(b)); }
+function owesBadge(b) {
+  if (!b.quoted) return '';
+  const o = owes(b), col = collected(b);
+  if (col>=b.quoted) return `<span class="badge badge-paid">Pagado completo</span>`;
+  if (o>0) return `<span class="badge badge-owed">Adeuda ${fmt(o)}</span>`;
+  return `<span class="badge badge-clear">Al corriente</span>`;
+}
+function stageColor(b) { return STRIPE[STAGES.indexOf(b.stage)%STRIPE.length]; }
+
+// Only active (non-archived) books count toward stats
+function activeBooks() { return books.filter(b=>!b.archived); }
+
+function updateBadges() {
+  const qb = document.getElementById('quotes-badge');
+  if (quotes.length>0) { qb.textContent=quotes.length; qb.style.display=''; } else { qb.style.display='none'; }
+  const ab = document.getElementById('archive-badge');
+  const arch = books.filter(b=>b.archived).length;
+  if (arch>0) { ab.textContent=arch; ab.style.display=''; } else { ab.style.display='none'; }
+}
+
+function showSection(name) {
+  document.querySelectorAll('.section').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+  document.getElementById('section-'+name).classList.add('active');
+  document.getElementById('nav-'+name).classList.add('active');
+  if (name==='tasks') renderTasks();
+  if (name==='books') renderBooks();
+  if (name==='quotes') renderQuotes();
+  if (name==='archive') renderArchive();
+  if (name==='config') updateCfgStatus();
+}
+
+function render() { renderStatsBar(); renderTasks(); renderBooks(); renderQuotes(); renderArchive(); updateBadges(); }
+
+/* ── STATS BAR ── */
+function renderStatsBar() {
+  const active = activeBooks();
+  const totalQuoted = active.reduce((s,b)=>s+(b.quoted||0),0);
+  const totalCollected = active.reduce((s,b)=>s+collected(b),0);
+  const totalOwed = active.reduce((s,b)=>s+owes(b),0);
+  document.getElementById('sb-books').textContent = active.length;
+  document.getElementById('sb-quoted').textContent = fmt(totalQuoted);
+  document.getElementById('sb-collected').textContent = fmt(totalCollected);
+  const owedEl = document.getElementById('sb-owed');
+  owedEl.textContent = fmt(totalOwed);
+  owedEl.style.color = totalOwed>0 ? 'var(--red)' : 'var(--green)';
+  document.getElementById('header-date').textContent = new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+}
+
+/* ── TASKS ── */
+function renderTasks() {
+  const today = new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  document.getElementById('today-label').textContent = today;
+  const sorted = [...activeBooks()].sort((a,b)=>a.priority-b.priority);
+  const el = document.getElementById('task-list');
+  if (!sorted.length) {
+    el.innerHTML = `<div class="empty" style="padding:24px 0"><div class="empty-icon">📖</div>No hay libros activos todavía.<br>Aprueba una cotización o agrega un libro.</div>`;
+  } else {
+    el.innerHTML = sorted.map(b => {
+      const u = urgency(b);
+      return `<div class="task-card">
+        <div class="task-stripe ${stageColor(b)}"></div>
+        <div class="task-body">
+          <div class="task-left">
+            <div class="task-title-row"><span class="task-book">${esc(b.title)}</span><span class="task-author">${esc(b.author||'')}</span></div>
+            <div class="task-action">${STAGE_TASKS[b.stage]||b.stage}</div>
+            ${b.notes?`<div style="font-size:12px;color:rgba(26,22,17,0.4);font-style:italic;margin-top:2px">${esc(b.notes)}</div>`:''}
+            <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center">
+              <span class="badge badge-stage">${b.stage}</span>
+              ${b.deadline?`<span class="badge ${u.cls}">${u.text}</span>`:''}
+              ${b.copies?`<span class="badge" style="background:#f0ede8;color:rgba(26,22,17,0.6)">📦 ${b.copies} ejs.</span>`:''}
+              ${owesBadge(b)}
+            </div>
+          </div>
+          <div class="task-num">${b.priority}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  renderCustomTasks();
+}
+
+/* ── BOOKS ── */
+function renderBooks() {
+  const active = [...activeBooks()].sort((a,b)=>a.priority-b.priority);
+  document.getElementById('books-count').textContent = active.length+' libro'+(active.length!==1?'s':'')+' activos';
+  const el = document.getElementById('book-list');
+  if (!active.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">📚</div>No hay libros activos.</div>`;
+    return;
+  }
+  el.innerHTML = active.map(b => bookCardHTML(b, false)).join('');
+}
+
+/* ── ARCHIVE ── */
+function renderArchive() {
+  const archived = [...books.filter(b=>b.archived)].sort((a,b)=>(b.archivedAt||0)-(a.archivedAt||0));
+  document.getElementById('archive-count').textContent = archived.length+' libro'+(archived.length!==1?'s':'')+' archivados';
+  const el = document.getElementById('archive-list');
+  if (!archived.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">🗄</div>No hay libros archivados.<br>Cuando completes un libro, aparecerá aquí.</div>`;
+    return;
+  }
+  el.innerHTML = archived.map(b => bookCardHTML(b, true)).join('');
+  updateBadges();
+}
+
+function bookCardHTML(b, isArchived) {
+  const u = urgency(b);
+  const col = collected(b), o = owes(b);
+  const txs = b.transactions||[];
+  const showFin = !!openFin[b.id];
+  const showNotes = !!openNotes[b.id];
+  const eqOpen = !!editingFin[b.id];
+  const edOpen = !!editingDetails[b.id];
+  const notes = b.notes_log || [];
+  const archivedDate = b.archivedAt ? new Date(b.archivedAt).toLocaleDateString('es-MX',{day:'numeric',month:'long',year:'numeric'}) : '';
+
+  return `<div class="book-card${isArchived?' archived':''}">
+    ${edOpen ? `<div class="edit-form">
+      <div><label>Título</label><input id="ed-title-${b.id}" value="${esc(b.title)}"></div>
+      <div><label>Autor</label><input id="ed-author-${b.id}" value="${esc(b.author||'')}"></div>
+      <div><label>Fecha límite</label><input type="date" id="ed-deadline-${b.id}" value="${b.deadline||''}"></div>
+      <div><label>Ejemplares</label><input type="number" id="ed-copies-${b.id}" value="${b.copies||''}" min="0" step="1" placeholder="0"></div>
+      <div><label>Notas</label><input id="ed-notes-${b.id}" value="${esc(b.notes||'')}"></div>
+      <div class="edit-form-full" style="display:flex;gap:8px;padding-top:4px">
+        <button class="btn btn-primary" onclick="saveDetails(${b.id})">Guardar</button>
+        <button class="btn" onclick="cancelEdit(${b.id})">Cancelar</button>
+      </div>
+    </div>` : `<div class="book-card-header">
+      <div>
+        <div class="book-name">${esc(b.title)}</div>
+        <div class="book-author-line">${esc(b.author||'')}</div>
+        ${b.notes?`<div class="book-notes">${esc(b.notes)}</div>`:''}
+        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center">
+          ${isArchived?`<span class="badge badge-archived">Archivado ${archivedDate}</span>`:`<span class="badge badge-stage">${b.stage}</span>`}
+          ${(!isArchived&&b.deadline)?`<span class="badge ${u.cls}">${u.text}</span>`:''}
+          ${b.copies?`<span class="badge" style="background:#f0ede8;color:rgba(26,22,17,0.6)">📦 ${b.copies} ejemplares</span>`:''}
+        </div>
+      </div>
+      <div class="book-controls">
+        ${!isArchived?`
+        <div class="pri-wrap">
+          <button class="pri-btn" onclick="changePri(${b.id},-1)">▲</button>
+          <div class="pri-num">${b.priority}</div>
+          <button class="pri-btn" onclick="changePri(${b.id},1)">▼</button>
+        </div>
+        <select class="stage-sel" onchange="changeStage(${b.id},this.value)">
+          ${STAGES.map(s=>`<option${s===b.stage?' selected':''}>${s}</option>`).join('')}
+        </select>
+        <button class="btn-icon" onclick="startEdit(${b.id})" title="Editar">✎</button>
+        <button class="btn-archive" onclick="openArchiveModal(${b.id})" title="Archivar">🗄 Archivar</button>
+        <button class="btn-danger" onclick="deleteBook(${b.id})" title="Eliminar">✕</button>
+        `:`
+        <button class="btn-unarchive" onclick="unarchiveBook(${b.id})">↩ Reactivar</button>
+        <button class="btn-danger" onclick="deleteBook(${b.id})" title="Eliminar permanentemente">✕</button>
+        `}
+      </div>
+    </div>`}
+    <div class="book-body">
+      <div class="fin-grid">
+        <div class="fin-cell">
+          <div class="fin-label">Total cotizado</div>
+          ${eqOpen
+            ?`<div style="display:flex;gap:6px;align-items:center"><input id="eq-${b.id}" type="number" value="${b.quoted||0}" min="0" step="0.01" style="width:120px"><button class="btn btn-primary" onclick="saveQuote(${b.id})">Guardar</button></div>`
+            :`<div style="display:flex;align-items:baseline;gap:6px"><div class="fin-val">${fmt(b.quoted||0)}</div>${!isArchived?`<button class="btn-icon" onclick="editQuote(${b.id})">✎</button>`:''}</div>`
+          }
+          <div class="fin-sub">Acordado con el cliente</div>
+        </div>
+        <div class="fin-cell">
+          <div class="fin-label">Cobrado</div>
+          <div class="fin-val" style="color:var(--green)">${fmt(col)}</div>
+          <div class="fin-sub">Pagos recibidos</div>
+        </div>
+        <div class="fin-cell">
+          <div class="fin-label">Por cobrar</div>
+          <div class="fin-val" style="color:${o>0?'var(--red)':'var(--green)'}">${fmt(o)}</div>
+          <div class="fin-sub">${owesBadge(b)}</div>
+        </div>
+      </div>
+      <button class="tx-toggle" onclick="toggleFin(${b.id})">
+        ${showFin?'▲ Ocultar':'▼ Transacciones'} — Pagos (${txs.filter(t=>t.type==='income').length}) · Gastos (${txs.filter(t=>t.type==='expense').length})
+      </button>
+      <button class="notes-toggle" onclick="toggleNotes('book',${b.id})">
+        ${showNotes?'▲ Ocultar notas':'▼ Notas'} (${notes.length})
+      </button>
+      ${showFin?`<div class="tx-list">
+        ${txs.length?txs.map((t,ti)=>`<div class="tx-row">
+          <span>${esc(t.label)}</span>
+          <span style="font-weight:600;color:${t.type==='income'?'var(--green)':'var(--red)'}">
+            ${t.type==='income'?'+':'−'}${fmt(t.amount)}
+          </span>
+          ${!isArchived?`<button class="btn-danger" onclick="deleteTx(${b.id},${ti})">✕</button>`:'<span></span>'}
+        </div>`).join(''):'<div style="font-size:12px;color:rgba(26,22,17,0.4);padding:8px 0">Sin transacciones aún.</div>'}
+        ${!isArchived?`<div class="add-tx-row">
+          <input id="tx-label-${b.id}" type="text" placeholder="Descripción">
+          <input id="tx-amount-${b.id}" type="number" placeholder="Monto" min="0" step="0.01">
+          <select id="tx-type-${b.id}" style="font-size:12px;padding:6px 8px"><option value="income">Pago</option><option value="expense">Gasto</option></select>
+          <button class="btn btn-primary" onclick="addTx(${b.id})">＋</button>
+        </div>`:''}
+      </div>`:''}
+      ${showNotes?`<div class="notes-list">
+        ${notes.length?[...notes].reverse().map((n,ni)=>`<div class="note-row">
+          <div>
+            <div class="note-meta">${n.date}</div>
+            <div class="note-text">${linkify(n.text)}</div>
+          </div>
+          ${!isArchived?`<button class="btn-danger" onclick="deleteNote('book',${b.id},${notes.length-1-ni})">✕</button>`:'<span></span>'}
+        </div>`).join(''):'<div style="font-size:12px;color:rgba(26,22,17,0.4);padding:8px 0">Sin notas aún.</div>'}
+        ${!isArchived?`<div class="add-note-row">
+          <textarea id="note-text-book-${b.id}" placeholder="Escribe una nota... pega una URL y se detectará automáticamente"></textarea>
+          <button class="btn btn-primary" onclick="addNote('book',${b.id})" style="align-self:flex-end">＋ Nota</button>
+        </div>`:''}
+      </div>`:''}
+    </div>
+  </div>`;
+}
+
+/* ── QUOTES ── */
+function renderQuotes() {
+  updateBadges();
+  const total = quotes.reduce((s,q)=>s+(q.amount||0),0);
+  document.getElementById('quotes-count').textContent = quotes.length+' cotización'+(quotes.length!==1?'es':'');
+  document.getElementById('quotes-summary').innerHTML = quotes.length ? `
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px">
+      <div class="metric-card"><div class="metric-label">Cotizaciones pendientes</div><div class="metric-val">${quotes.length}</div></div>
+      <div class="metric-card" style="--mc:var(--accent2)"><div class="metric-label">Total en cotizaciones</div><div class="metric-val" style="font-size:18px;color:var(--accent2)">${fmt(total)}</div></div>
+      <div class="metric-card"><div class="metric-label">Promedio por cotización</div><div class="metric-val" style="font-size:18px">${fmt(quotes.length?total/quotes.length:0)}</div></div>
+    </div>` : '';
+  const el = document.getElementById('quote-list');
+  if (!quotes.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">📋</div>No hay cotizaciones pendientes.<br>Agrega una desde "Nueva cotización".</div>`;
+    return;
+  }
+  el.innerHTML = quotes.map(q => {
+    const edOpen = !!editingQuoteDetails[q.id];
+    const dateStr = q.quoteDate ? new Date(q.quoteDate+'T12:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'long',year:'numeric'}) : '—';
+    return `<div class="quote-card">
+      ${edOpen?`<div class="edit-form" style="grid-template-columns:1fr 1fr 1fr">
+        <div><label>Título</label><input id="qe-title-${q.id}" value="${esc(q.title)}"></div>
+        <div><label>Autor</label><input id="qe-author-${q.id}" value="${esc(q.author||'')}"></div>
+        <div><label>Monto cotizado</label><input type="number" id="qe-amount-${q.id}" value="${q.amount||0}" min="0" step="0.01"></div>
+        <div><label>Ejemplares</label><input type="number" id="qe-copies-${q.id}" value="${q.copies||''}" min="0" step="1" placeholder="0"></div>
+        <div><label>Fecha cotización</label><input type="date" id="qe-date-${q.id}" value="${q.quoteDate||''}"></div>
+        <div><label>Notas</label><input id="qe-notes-${q.id}" value="${esc(q.notes||'')}"></div>
+        <div></div>
+        <div><label>Cliente</label><input id="qe-client-${q.id}" value="${esc(q.client?.name||'')}"></div>
+        <div><label>Contacto</label><input id="qe-contact-${q.id}" value="${esc(q.client?.contact||'')}"></div>
+        <div><label>Email</label><input id="qe-email-${q.id}" value="${esc(q.client?.email||'')}"></div>
+        <div><label>Teléfono</label><input id="qe-phone-${q.id}" value="${esc(q.client?.phone||'')}"></div>
+        <div><label>Notas cliente</label><input id="qe-cnotes-${q.id}" value="${esc(q.client?.notes||'')}"></div>
+        <div></div>
+        <div class="edit-form-full" style="display:flex;gap:8px;padding-top:4px">
+          <button class="btn btn-primary" onclick="saveQuoteDetails(${q.id})">Guardar</button>
+          <button class="btn" onclick="cancelEditQuote(${q.id})">Cancelar</button>
+        </div>
+      </div>`:`<div class="quote-card-header">
+        <div>
+          <div class="book-name">${esc(q.title)}</div>
+          <div class="book-author-line">${esc(q.author||'')}</div>
+          ${q.notes?`<div class="book-notes">${esc(q.notes)}</div>`:''}
+          <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center">
+            <span class="badge badge-quote">Cotización pendiente</span>
+            <span style="font-size:12px;color:rgba(26,22,17,0.4)">Cotizado el ${dateStr}</span>
+          </div>
+        </div>
+        <div class="book-controls">
+          <button class="btn btn-approve" onclick="openApproveModal(${q.id})">✓ Aprobar</button>
+          <button class="btn-icon" onclick="startEditQuote(${q.id})" title="Editar">✎</button>
+          <button class="btn-danger" onclick="deleteQuote(${q.id})" title="Eliminar">✕</button>
+        </div>
+      </div>`}
+      <div class="quote-body">
+        <div class="client-grid">
+          <div class="client-field"><div class="client-label">Cliente</div><div class="client-val">${esc(q.client?.name||'—')}</div></div>
+          <div class="client-field"><div class="client-label">Contacto</div><div class="client-val">${esc(q.client?.contact||'—')}</div></div>
+          <div class="client-field"><div class="client-label">Monto cotizado</div><div class="client-val" style="color:var(--accent2);font-family:'DM Serif Display',serif;font-size:20px">${fmt(q.amount||0)}</div></div>
+          ${q.copies?`<div class="client-field"><div class="client-label">Ejemplares</div><div class="client-val">📦 ${q.copies}</div></div>`:''}
+          ${q.client?.email?`<div class="client-field"><div class="client-label">Email</div><div class="client-val">${esc(q.client.email)}</div></div>`:''}
+          ${q.client?.phone?`<div class="client-field"><div class="client-label">Teléfono</div><div class="client-val">${esc(q.client.phone)}</div></div>`:''}
+          ${q.client?.notes?`<div class="client-field" style="grid-column:1/-1"><div class="client-label">Notas del cliente</div><div class="client-val" style="font-weight:400;font-size:13px">${esc(q.client.notes)}</div></div>`:''}
+        </div>
+        ${(()=>{
+          const qnotes = q.notes_log||[];
+          const showQN = !!openNotes['q'+q.id];
+          return `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+            <button class="notes-toggle" style="margin-left:0" onclick="toggleNotes('quote',${q.id})">
+              ${showQN?'▲ Ocultar notas':'▼ Notas'} (${qnotes.length})
+            </button>
+            ${showQN?`<div class="notes-list">
+              ${qnotes.length?[...qnotes].reverse().map((n,ni)=>`<div class="note-row">
+                <div>
+                  <div class="note-meta">${n.date}</div>
+                  <div class="note-text">${linkify(n.text)}</div>
+                </div>
+                <button class="btn-danger" onclick="deleteNote('quote',${q.id},${qnotes.length-1-ni})">✕</button>
+              </div>`).join(''):'<div style="font-size:12px;color:rgba(26,22,17,0.4);padding:8px 0">Sin notas aún.</div>'}
+              <div class="add-note-row">
+                <textarea id="note-text-quote-${q.id}" placeholder="Escribe una nota... pega una URL y se detectará automáticamente"></textarea>
+                <button class="btn btn-primary" onclick="addNote('quote',${q.id})" style="align-self:flex-end">＋ Nota</button>
+              </div>
+            </div>`:''}
+          </div>`;
+        })()}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ── ARCHIVE MODAL ── */
+function openArchiveModal(id) {
+  archiveId = id;
+  const b = books.find(x=>x.id===id);
+  document.getElementById('archive-modal-sub').textContent = `"${b.title}"`;
+  document.getElementById('archive-modal').classList.add('open');
+}
+function closeArchiveModal() { document.getElementById('archive-modal').classList.remove('open'); archiveId=null; }
+function confirmArchive() {
+  const b = books.find(x=>x.id===archiveId);
+  if (!b) return;
+  b.archived = true;
+  b.archivedAt = Date.now();
+  save(); closeArchiveModal(); render();
+  showSection('books');
+}
+function unarchiveBook(id) {
+  const b = books.find(x=>x.id===id);
+  if (!b) return;
+  b.archived = false; delete b.archivedAt;
+  save(); render(); showSection('archive');
+}
+
+/* ── APPROVE MODAL ── */
+function openApproveModal(id) {
+  approveId = id;
+  const q = quotes.find(x=>x.id===id);
+  document.getElementById('approve-modal-sub').textContent = `"${q.title}" — ${fmt(q.amount||0)}`;
+  document.getElementById('approve-deadline').value = '';
+  document.getElementById('approve-modal').classList.add('open');
+}
+function closeApproveModal() { document.getElementById('approve-modal').classList.remove('open'); approveId=null; }
+function confirmApprove() {
+  const q = quotes.find(x=>x.id===approveId);
+  if (!q) return;
+  const maxP = books.length ? Math.max(...books.map(b=>b.priority)) : 0;
+  books.push({
+    id: Date.now(), title: q.title, author: q.author||'',
+    stage: document.getElementById('approve-stage').value,
+    deadline: document.getElementById('approve-deadline').value,
+    quoted: q.amount||0, copies: q.copies||0, notes: q.notes||'',
+    priority: maxP+1, transactions: [], client: q.client||{}
+  });
+  quotes = quotes.filter(x=>x.id!==approveId);
+  save(); closeApproveModal(); render(); showSection('books');
+}
+
+/* ── QUOTE EDIT ── */
+function startEditQuote(id) { editingQuoteDetails[id]=true; renderQuotes(); }
+function cancelEditQuote(id) { delete editingQuoteDetails[id]; renderQuotes(); }
+function saveQuoteDetails(id) {
+  const q = quotes.find(x=>x.id===id);
+  if (!q) return;
+  q.title = document.getElementById('qe-title-'+id).value.trim()||q.title;
+  q.author = document.getElementById('qe-author-'+id).value.trim();
+  q.amount = parseFloat(document.getElementById('qe-amount-'+id).value)||0;
+  q.copies = parseInt(document.getElementById('qe-copies-'+id).value)||0;
+  q.quoteDate = document.getElementById('qe-date-'+id).value;
+  q.notes = document.getElementById('qe-notes-'+id).value.trim();
+  q.client = {
+    name: document.getElementById('qe-client-'+id).value.trim(),
+    contact: document.getElementById('qe-contact-'+id).value.trim(),
+    email: document.getElementById('qe-email-'+id).value.trim(),
+    phone: document.getElementById('qe-phone-'+id).value.trim(),
+    notes: document.getElementById('qe-cnotes-'+id).value.trim()
+  };
+  delete editingQuoteDetails[id]; save(); renderQuotes();
+}
+function deleteQuote(id) {
+  if (!confirm('¿Eliminar esta cotización?')) return;
+  quotes = quotes.filter(x=>x.id!==id); save(); renderQuotes();
+}
+
+/* ── BOOK ACTIONS ── */
+function startEdit(id) { editingDetails[id]=true; renderBooks(); }
+function cancelEdit(id) { delete editingDetails[id]; renderBooks(); }
+function saveDetails(id) {
+  const b = books.find(x=>x.id===id);
+  if (!b) return;
+  b.title = document.getElementById('ed-title-'+id).value.trim()||b.title;
+  b.author = document.getElementById('ed-author-'+id).value.trim();
+  b.deadline = document.getElementById('ed-deadline-'+id).value;
+  b.copies = parseInt(document.getElementById('ed-copies-'+id).value)||0;
+  b.notes = document.getElementById('ed-notes-'+id).value.trim();
+  delete editingDetails[id]; save(); render();
+}
+function editQuote(id) { editingFin[id]=true; renderBooks(); }
+function saveQuote(id) {
+  const val = parseFloat(document.getElementById('eq-'+id).value)||0;
+  const b = books.find(x=>x.id===id);
+  if (b) { b.quoted=val; save(); }
+  delete editingFin[id]; renderStatsBar(); renderBooks(); renderTasks();
+}
+function toggleFin(id) { openFin[id]=!openFin[id]; renderBooks(); renderArchive(); }
+function addTx(id) {
+  const label = document.getElementById('tx-label-'+id).value.trim();
+  const amount = parseFloat(document.getElementById('tx-amount-'+id).value);
+  const type = document.getElementById('tx-type-'+id).value;
+  if (!label||isNaN(amount)||amount<=0) return;
+  const b = books.find(x=>x.id===id);
+  if (!b||!b.transactions) b.transactions=[];
+  b.transactions.push({label,amount,type});
+  save(); renderStatsBar(); renderBooks(); renderTasks();
+}
+function deleteTx(bookId, txIdx) {
+  const b = books.find(x=>x.id===bookId);
+  if (!b) return;
+  b.transactions.splice(txIdx,1);
+  save(); renderStatsBar(); renderBooks(); renderTasks();
+}
+function addBook() {
+  const title = document.getElementById('nb-title').value.trim();
+  if (!title) { alert('El título es obligatorio.'); return; }
+  const maxP = books.length ? Math.max(...books.map(b=>b.priority)) : 0;
+  books.push({
+    id: Date.now(), title,
+    author: document.getElementById('nb-author').value.trim(),
+    stage: document.getElementById('nb-stage').value,
+    deadline: document.getElementById('nb-deadline').value,
+    quoted: parseFloat(document.getElementById('nb-budget').value)||0,
+    copies: parseInt(document.getElementById('nb-copies').value)||0,
+    notes: document.getElementById('nb-notes').value.trim(),
+    priority: maxP+1, transactions: []
+  });
+  save();
+  ['nb-title','nb-author','nb-notes','nb-deadline','nb-budget','nb-copies'].forEach(id=>document.getElementById(id).value='');
+  showSection('tasks');
+}
+function addQuote() {
+  const title = document.getElementById('nq-title').value.trim();
+  if (!title) { alert('El título es obligatorio.'); return; }
+  quotes.push({
+    id: Date.now(), title,
+    author: document.getElementById('nq-author').value.trim(),
+    amount: parseFloat(document.getElementById('nq-amount').value)||0,
+    copies: parseInt(document.getElementById('nq-copies').value)||0,
+    quoteDate: document.getElementById('nq-date').value,
+    notes: document.getElementById('nq-notes').value.trim(),
+    client: {
+      name: document.getElementById('nq-client-name').value.trim(),
+      contact: document.getElementById('nq-client-contact').value.trim(),
+      email: document.getElementById('nq-client-email').value.trim(),
+      phone: document.getElementById('nq-client-phone').value.trim(),
+      notes: document.getElementById('nq-client-notes').value.trim()
+    }
+  });
+  save();
+  ['nq-title','nq-author','nq-amount','nq-date','nq-notes','nq-client-name','nq-client-contact','nq-client-email','nq-client-phone','nq-client-notes']
+    .forEach(id=>document.getElementById(id).value='');
+  showSection('quotes');
+}
+/* ── HELPERS ── */
+function linkify(text) {
+  // Split on URLs, escape non-URL parts, wrap URLs in anchor tags
+  const urlRegex = /(https?:\/\/[^\s<>"]+)/g;
+  return text.split(urlRegex).map((part, i) => {
+    if (urlRegex.test(part)) {
+      urlRegex.lastIndex = 0;
+      return `<a class="note-link" href="${esc(part)}" target="_blank" rel="noopener">🔗 ${esc(part)}</a>`;
+    }
+    return esc(part);
+  }).join('');
+}
+
+/* ── NOTES ── */
+function toggleNotes(type, id) {
+  const key = type==='quote' ? 'q'+id : id;
+  openNotes[key] = !openNotes[key];
+  if (type==='quote') renderQuotes(); else { renderBooks(); renderArchive(); }
+}
+function addNote(type, id) {
+  const textEl = document.getElementById('note-text-'+type+'-'+id);
+  const text = textEl.value.trim();
+  if (!text) return;
+  const date = new Date().toLocaleString('es-MX',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  const entry = { text, date };
+  if (type==='quote') {
+    const q = quotes.find(x=>x.id===id);
+    if (!q) return;
+    if (!q.notes_log) q.notes_log=[];
+    q.notes_log.push(entry);
+    save(); renderQuotes();
+  } else {
+    const b = books.find(x=>x.id===id);
+    if (!b) return;
+    if (!b.notes_log) b.notes_log=[];
+    b.notes_log.push(entry);
+    save(); renderBooks(); renderArchive();
+  }
+}
+function deleteNote(type, id, idx) {
+  if (!confirm('¿Eliminar esta nota?')) return;
+  if (type==='quote') {
+    const q = quotes.find(x=>x.id===id);
+    if (!q) return;
+    q.notes_log.splice(idx,1);
+    save(); renderQuotes();
+  } else {
+    const b = books.find(x=>x.id===id);
+    if (!b) return;
+    b.notes_log.splice(idx,1);
+    save(); renderBooks(); renderArchive();
+  }
+}
+
+/* ── CUSTOM TASKS ── */
+let customTasks = [];
+let archivedTasks = [];
+let showArchivedTasks = false;
+const CT_KEY = 'editorial_custom_tasks_v1';
+const CT_ARCH_KEY = 'editorial_custom_tasks_archived_v1';
+
+function loadCustomTasks() {
+  try { const r = localStorage.getItem(CT_KEY); if (r) customTasks = JSON.parse(r); } catch(e) { customTasks = []; }
+  try { const r = localStorage.getItem(CT_ARCH_KEY); if (r) archivedTasks = JSON.parse(r); } catch(e) { archivedTasks = []; }
+}
+function saveCustomTasks() {
+  try { localStorage.setItem(CT_KEY, JSON.stringify(customTasks)); } catch(e) {}
+  try { localStorage.setItem(CT_ARCH_KEY, JSON.stringify(archivedTasks)); } catch(e) {}
+}
+function renderCustomTasks() {
+  const el = document.getElementById('custom-task-list');
+  const archEl = document.getElementById('archived-tasks-section');
+  if (!el) return;
+
+  const pending = customTasks.filter(t=>!t.done);
+  const done = customTasks.filter(t=>t.done);
+
+  let html = '';
+  if (!customTasks.length) {
+    html = `<div style="font-size:13px;color:rgba(26,22,17,0.35);padding:8px 0">No hay tareas pendientes.</div>`;
+  } else {
+    html = customTasks.map((t,i) => `
+      <div class="custom-task-item">
+        <input type="checkbox" class="custom-task-check" ${t.done?'checked':''} onchange="toggleCustomTask(${i})">
+        <div class="custom-task-body">
+          <div class="custom-task-text${t.done?' done':''}">${linkify(t.text)}</div>
+        </div>
+        <button class="btn-danger" onclick="deleteCustomTask(${i})" title="Eliminar">✕</button>
+      </div>`).join('');
+    if (done.length) {
+      html += `<button class="btn" onclick="archiveDoneTasks()" style="font-size:11px;margin-top:6px">🗄 Archivar completadas (${done.length})</button>`;
+    }
+  }
+  el.innerHTML = html;
+
+  // Archived tasks section
+  let archHtml = '';
+  if (archivedTasks.length) {
+    archHtml = `<button class="archived-tasks-toggle" onclick="showArchivedTasks=!showArchivedTasks;renderCustomTasks()">
+      ${showArchivedTasks?'▲':'▼'} Tareas completadas archivadas (${archivedTasks.length})
+    </button>`;
+    if (showArchivedTasks) {
+      archHtml += `<div class="archived-tasks-list">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+          <button class="btn" onclick="if(confirm('¿Eliminar todo el historial?')){archivedTasks=[];saveCustomTasks();renderCustomTasks();}" style="font-size:11px">Vaciar historial</button>
+        </div>
+        ${[...archivedTasks].reverse().map((t,i)=>`
+          <div class="archived-task-row">
+            <span style="font-size:13px;color:rgba(26,22,17,0.5);flex:1;text-decoration:line-through">${linkify(t.text)}</span>
+            <span class="archived-task-date">${t.completedAt||''}</span>
+            <button class="btn-danger" onclick="deleteArchivedTask(${archivedTasks.length-1-i})" title="Eliminar">✕</button>
+          </div>`).join('')}
+      </div>`;
+    }
+  }
+  archEl.innerHTML = archHtml;
+}
+function addCustomTask() {
+  const text = document.getElementById('ct-text').value.trim();
+  if (!text) return;
+  customTasks.push({ text, done: false });
+  saveCustomTasks();
+  document.getElementById('ct-text').value = '';
+  renderCustomTasks();
+}
+function toggleCustomTask(i) {
+  customTasks[i].done = !customTasks[i].done;
+  saveCustomTasks(); renderCustomTasks();
+}
+function deleteCustomTask(i) {
+  customTasks.splice(i,1);
+  saveCustomTasks(); renderCustomTasks();
+}
+function archiveDoneTasks() {
+  const completedAt = new Date().toLocaleString('es-MX',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  const done = customTasks.filter(t=>t.done).map(t=>({...t, completedAt}));
+  archivedTasks.push(...done);
+  customTasks = customTasks.filter(t=>!t.done);
+  saveCustomTasks(); renderCustomTasks();
+}
+function deleteArchivedTask(i) {
+  archivedTasks.splice(i,1);
+  saveCustomTasks(); renderCustomTasks();
+}
+
+function changePri(id, dir) {
+  const sorted = [...activeBooks()].sort((a,b)=>a.priority-b.priority);
+  const idx = sorted.findIndex(b=>b.id===id);
+  const swapIdx = idx+dir;
+  if (swapIdx<0||swapIdx>=sorted.length) return;
+  const tmp = sorted[idx].priority;
+  sorted[idx].priority = sorted[swapIdx].priority;
+  sorted[swapIdx].priority = tmp;
+  save(); renderBooks();
+}
+function changeStage(id, stage) {
+  const b = books.find(x=>x.id===id);
+  if (b) { b.stage=stage; save(); renderBooks(); }
+}
+function deleteBook(id) {
+  if (!confirm('¿Eliminar este libro permanentemente?')) return;
+  books = books.filter(x=>x.id!==id);
+  delete openFin[id]; delete editingFin[id]; delete editingDetails[id];
+  save(); render();
+}
+
+/* ── EXPORT / IMPORT ── */
+function csvCell(v) {
+  const s = String(v === null || v === undefined ? '' : v).replace(/\r?\n/g,' ');
+  return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g,'""')}"` : s;
+}
+function csvRow(arr) { return arr.map(csvCell).join(','); }
+function downloadCSV(filename, content) {
+  const blob = new Blob(['\uFEFF'+content], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+}
+
+function booksToCSV(list) {
+  const headers = ['ID','Título','Autor','Etapa','Fecha límite','Total cotizado','Cobrado','Por cobrar','Ejemplares','Archivado','Fecha archivado','Prioridad','Notas generales','Transacciones','Notas log'];
+  const rows = list.map(b => {
+    const col = collected(b);
+    const txStr = (b.transactions||[]).map(t=>`${t.type}:${t.label}:${t.amount}`).join(' | ');
+    const notesStr = (b.notes_log||[]).map(n=>`[${n.date}] ${n.text}`).join(' | ');
+    return csvRow([
+      b.id, b.title, b.author||'', b.stage, b.deadline||'',
+      b.quoted||0, col, owes(b), b.copies||0,
+      b.archived?'Sí':'No', b.archivedAt ? new Date(b.archivedAt).toLocaleDateString('es-MX') : '',
+      b.priority||'', b.notes||'', txStr, notesStr
+    ]);
+  });
+  return [csvRow(headers), ...rows].join('\n');
+}
+
+function quotesToCSV() {
+  const headers = ['ID','Título','Autor','Monto cotizado','Ejemplares','Fecha cotización','Cliente','Contacto','Email','Teléfono','Notas cliente','Notas libro','Notas log'];
+  const rows = quotes.map(q => {
+    const notesStr = (q.notes_log||[]).map(n=>`[${n.date}] ${n.text}`).join(' | ');
+    return csvRow([
+      q.id, q.title, q.author||'', q.amount||0, q.copies||0, q.quoteDate||'',
+      q.client?.name||'', q.client?.contact||'', q.client?.email||'', q.client?.phone||'',
+      q.client?.notes||'', q.notes||'', notesStr
+    ]);
+  });
+  return [csvRow(headers), ...rows].join('\n');
+}
+
+function exportBooks() {
+  const active = books.filter(b=>!b.archived);
+  if (!active.length) { alert('No hay libros activos para exportar.'); return; }
+  downloadCSV('libros.csv', booksToCSV(active));
+}
+function exportQuotes() {
+  if (!quotes.length) { alert('No hay cotizaciones para exportar.'); return; }
+  downloadCSV('cotizaciones.csv', quotesToCSV());
+}
+function exportArchived() {
+  const arch = books.filter(b=>b.archived);
+  if (!arch.length) { alert('No hay libros archivados para exportar.'); return; }
+  downloadCSV('archivados.csv', booksToCSV(arch));
+}
+function exportAll() {
+  const active = books.filter(b=>!b.archived);
+  const arch = books.filter(b=>b.archived);
+  let content = '';
+  content += '=== LIBROS ACTIVOS ===\n';
+  content += active.length ? booksToCSV(active) : '(sin datos)';
+  content += '\n\n=== COTIZACIONES PENDIENTES ===\n';
+  content += quotes.length ? quotesToCSV() : '(sin datos)';
+  content += '\n\n=== LIBROS ARCHIVADOS ===\n';
+  content += arch.length ? booksToCSV(arch) : '(sin datos)';
+  const date = new Date().toISOString().slice(0,10);
+  downloadCSV(`editorial_tracker_${date}.csv`, content);
+}
+
+function importCSV() {
+  const file = document.getElementById('import-file').files[0];
+  if (!file) { alert('Selecciona un archivo CSV primero.'); return; }
+  const mode = document.querySelector('input[name="import-mode"]:checked').value;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const text = e.target.result.replace(/^\uFEFF/,''); // strip BOM
+      const sections = text.split(/\n\n=== .+ ===\n/);
+      let importedBooks = 0, importedQuotes = 0, importedArchived = 0;
+
+      // Try to detect if it's a combined file or single section
+      const isCombined = text.includes('=== LIBROS ACTIVOS ===');
+      let booksCSV='', quotesCSV='', archivedCSV='';
+
+      if (isCombined) {
+        const booksMatch = text.match(/=== LIBROS ACTIVOS ===\n([\s\S]*?)(?=\n\n===|$)/);
+        const quotesMatch = text.match(/=== COTIZACIONES PENDIENTES ===\n([\s\S]*?)(?=\n\n===|$)/);
+        const archivedMatch = text.match(/=== LIBROS ARCHIVADOS ===\n([\s\S]*?)(?=\n\n===|$)/);
+        booksCSV = booksMatch?.[1]||'';
+        quotesCSV = quotesMatch?.[1]||'';
+        archivedCSV = archivedMatch?.[1]||'';
+      } else {
+        // Single section — detect by headers
+        const firstLine = text.split('\n')[0];
+        if (firstLine.includes('Monto cotizado') && firstLine.includes('Cliente')) quotesCSV = text;
+        else booksCSV = text;
+      }
+
+      function parseCSVRows(csv) {
+        const lines = csv.trim().split('\n');
+        if (lines.length < 2) return [];
+        return lines.slice(1).map(line => {
+          const cells = [];
+          let cur='', inQ=false;
+          for (let i=0;i<line.length;i++) {
+            if (line[i]==='"') { inQ=!inQ; }
+            else if (line[i]===','&&!inQ) { cells.push(cur.replace(/""/g,'"')); cur=''; }
+            else cur+=line[i];
+          }
+          cells.push(cur.replace(/""/g,'"'));
+          return cells;
+        }).filter(r=>r.length>1&&r[0]);
+      }
+
+      if (mode==='replace') { books=[]; quotes=[]; }
+
+      // Import active books
+      parseCSVRows(booksCSV).forEach(r => {
+        if (r[8]==='No' || r[8]==='') {
+          const exists = books.find(b=>String(b.id)===r[0]);
+          if (!exists) {
+            books.push({id:Date.now()+Math.random(),title:r[1],author:r[2],stage:r[3],deadline:r[4],quoted:parseFloat(r[5])||0,priority:parseInt(r[10])||books.length+1,notes:r[11]||'',archived:false,transactions:[],notes_log:[]});
+            importedBooks++;
+          }
+        }
+      });
+
+      // Import archived
+      parseCSVRows(booksCSV.length?booksCSV:archivedCSV).forEach(r => {
+        if (r[8]==='Sí') {
+          const exists = books.find(b=>String(b.id)===r[0]);
+          if (!exists) {
+            books.push({id:Date.now()+Math.random(),title:r[1],author:r[2],stage:r[3],deadline:r[4],quoted:parseFloat(r[5])||0,priority:parseInt(r[10])||books.length+1,notes:r[11]||'',archived:true,transactions:[],notes_log:[]});
+            importedArchived++;
+          }
+        }
+      });
+      parseCSVRows(archivedCSV).forEach(r => {
+        const exists = books.find(b=>String(b.id)===r[0]);
+        if (!exists) {
+          books.push({id:Date.now()+Math.random(),title:r[1],author:r[2],stage:r[3],deadline:r[4],quoted:parseFloat(r[5])||0,priority:parseInt(r[10])||books.length+1,notes:r[11]||'',archived:true,transactions:[],notes_log:[]});
+          importedArchived++;
+        }
+      });
+
+      // Import quotes
+      parseCSVRows(quotesCSV).forEach(r => {
+        const exists = quotes.find(q=>String(q.id)===r[0]);
+        if (!exists) {
+          quotes.push({id:Date.now()+Math.random(),title:r[1],author:r[2],amount:parseFloat(r[3])||0,quoteDate:r[4],client:{name:r[5],contact:r[6],email:r[7],phone:r[8],notes:r[9]},notes:r[10]||'',notes_log:[]});
+          importedQuotes++;
+        }
+      });
+
+      save();
+      render();
+      const resultEl = document.getElementById('import-result');
+      resultEl.style.display = '';
+      resultEl.style.color = 'var(--green)';
+      resultEl.innerHTML = `✓ Importación completada: <strong>${importedBooks}</strong> libro(s) activo(s), <strong>${importedArchived}</strong> archivado(s), <strong>${importedQuotes}</strong> cotización(es).`;
+      document.getElementById('import-file').value = '';
+    } catch(err) {
+      const resultEl = document.getElementById('import-result');
+      resultEl.style.display = '';
+      resultEl.style.color = 'var(--red)';
+      resultEl.textContent = '✗ Error al importar: ' + err.message;
+    }
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+load();
+</script>
+</body>
+</html>
