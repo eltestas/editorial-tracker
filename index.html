@@ -1090,6 +1090,7 @@ function renderBooks() {
             ${b.deadline?`<span class="badge ${u.cls}">${u.text}</span>`:''}
             ${b.copies?`<span class="badge" style="background:#f0ede8;color:rgba(26,22,17,0.6)">📦 ${b.copies}</span>`:''}
             ${o>0?`<span class="badge badge-owed">Adeuda ${fmt(o)}</span>`:b.quoted?`<span class="badge badge-paid">Pagado</span>`:''}
+            ${(b.notes_log&&b.notes_log.length)?`<span class="badge" style="background:#f0f4ff;color:#4a7fc1" title="${b.notes_log.length} nota${b.notes_log.length!==1?'s':''}">📝 ${b.notes_log.length}</span>`:''}
           </div>
         </div>
         <div class="book-row-right">
@@ -1109,8 +1110,8 @@ function renderBooks() {
 function openBookModal(id) {
   const b = books.find(x=>x.id===id);
   if (!b) return;
-  openFin[b.id] = false;
-  openNotes[b.id] = false;
+  openFin[b.id] = true;   // always expanded
+  openNotes[b.id] = true; // always expanded
   document.getElementById('bm-title').textContent = b.title;
   document.getElementById('bm-author').textContent = b.author||'';
   document.getElementById('bm-body').innerHTML = bookModalBody(b);
@@ -1191,42 +1192,37 @@ function bookModalBody(b) {
       </div>
     </div>
 
-    <button class="tx-toggle" onclick="toggleFinModal(${b.id})">
-      ${showFin?'▲ Ocultar':'▼ Transacciones'} — Pagos (${txs.filter(t=>t.type==='income').length}) · Gastos (${txs.filter(t=>t.type==='expense').length})
-    </button>
-    <button class="notes-toggle" onclick="toggleNotesModal(${b.id})">
-      ${showNotes?'▲ Ocultar notas':'▼ Notas'} (${notes.length})
-    </button>
-
-    ${showFin?`<div class="tx-list">
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.07em;color:rgba(26,22,17,0.4);margin-bottom:10px">Transacciones — Pagos (${txs.filter(t=>t.type==='income').length}) · Gastos (${txs.filter(t=>t.type==='expense').length})</div>
       ${txs.length?txs.map((t,ti)=>`<div class="tx-row">
         <span>${esc(t.label)}</span>
         <span style="font-weight:600;color:${t.type==='income'?'var(--green)':'var(--red)'}">
           ${t.type==='income'?'+':'−'}${fmt(t.amount)}
         </span>
         <button class="btn-danger" onclick="deleteTxModal(${b.id},${ti})">✕</button>
-      </div>`).join(''):'<div style="font-size:12px;color:rgba(26,22,17,0.4);padding:8px 0">Sin transacciones aún.</div>'}
-      <div class="add-tx-row">
+      </div>`).join(''):'<div style="font-size:12px;color:rgba(26,22,17,0.4);padding:6px 0">Sin transacciones aún.</div>'}
+      <div class="add-tx-row" style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border)">
         <input id="tx-label-${b.id}" type="text" placeholder="Descripción">
         <input id="tx-amount-${b.id}" type="number" placeholder="Monto" min="0" step="0.01">
         <select id="tx-type-${b.id}" style="font-size:12px;padding:6px 8px"><option value="income">Pago</option><option value="expense">Gasto</option></select>
         <button class="btn btn-primary" onclick="addTxModal(${b.id})">＋</button>
       </div>
-    </div>`:''}
+    </div>
 
-    ${showNotes?`<div class="notes-list">
+    <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.07em;color:rgba(26,22,17,0.4);margin-bottom:10px">Notas (${notes.length})</div>
       ${notes.length?[...notes].reverse().map((n,ni)=>`<div class="note-row">
         <div>
           <div class="note-meta">${n.date}</div>
           <div class="note-text">${linkify(n.text)}</div>
         </div>
         <button class="btn-danger" onclick="deleteNoteModal(${b.id},${notes.length-1-ni})">✕</button>
-      </div>`).join(''):'<div style="font-size:12px;color:rgba(26,22,17,0.4);padding:8px 0">Sin notas aún.</div>'}
-      <div class="add-note-row">
+      </div>`).join(''):'<div style="font-size:12px;color:rgba(26,22,17,0.4);padding:6px 0">Sin notas aún.</div>'}
+      <div class="add-note-row" style="margin-top:10px">
         <textarea id="note-text-book-${b.id}" placeholder="Escribe una nota... pega una URL y se detectará automáticamente"></textarea>
         <button class="btn btn-primary" onclick="addNoteModal(${b.id})" style="align-self:flex-end">＋ Nota</button>
       </div>
-    </div>`:''}
+    </div>
   `;
 }
 
