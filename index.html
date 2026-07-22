@@ -47,17 +47,6 @@ body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(
 .section-title { font-family: 'DM Serif Display', serif; font-size: 20px; }
 .section-sub { font-size: 12px; color: rgba(26,22,17,0.4); }
 
-/* Task cards */
-.task-card { background: white; border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 10px; display: grid; grid-template-columns: 4px 1fr; overflow: hidden; box-shadow: var(--shadow); }
-.task-stripe { background: var(--accent); }
-.task-body { padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.task-left { flex: 1; }
-.task-title-row { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
-.task-book { font-weight: 600; font-size: 14px; }
-.task-author { font-size: 12px; color: rgba(26,22,17,0.4); }
-.task-action { font-size: 13px; color: rgba(26,22,17,0.6); }
-.task-num { font-family: 'DM Serif Display', serif; font-size: 28px; color: rgba(26,22,17,0.08); line-height: 1; }
-
 /* Badges */
 .badge { font-size: 10px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; padding: 3px 8px; border-radius: 2px; white-space: nowrap; }
 .badge-stage { background: var(--paper2); color: var(--ink); }
@@ -144,27 +133,6 @@ body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(
 .add-note-row textarea:focus { border-color: var(--accent2); }
 .note-link { display: inline-block; margin-top: 4px; font-size: 12px; color: #1a56b0; text-decoration: none; word-break: break-all; }
 .note-link:hover { text-decoration: underline; }
-
-/* Custom tasks */
-.custom-tasks-section { margin-top: 28px; }
-.custom-tasks-header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid var(--border); margin-bottom: 14px; }
-.custom-tasks-title { font-family: 'DM Serif Display', serif; font-size: 17px; }
-.custom-task-item { background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; box-shadow: 0 1px 4px rgba(26,22,17,0.06); }
-.custom-task-item.archived-task { background: var(--paper); opacity: 0.6; }
-.custom-task-check { width: 16px; height: 16px; border: 1.5px solid var(--border); border-radius: 3px; cursor: pointer; flex-shrink: 0; appearance: none; background: white; }
-.custom-task-check:checked { background: var(--ink); border-color: var(--ink); background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 10 8' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 4l3 3 5-6' stroke='white' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-size: 10px; background-repeat: no-repeat; background-position: center; }
-.custom-task-text { flex: 1; font-size: 13px; line-height: 1.5; }
-.custom-task-text.done { text-decoration: line-through; color: rgba(26,22,17,0.35); }
-.custom-task-body { flex: 1; }
-.custom-task-link { font-size: 11px; color: #1a56b0; text-decoration: none; display: block; margin-top: 2px; word-break: break-all; }
-.custom-task-link:hover { text-decoration: underline; }
-.add-custom-task { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 10px; align-items: end; }
-.archived-tasks-toggle { font-size: 12px; color: rgba(26,22,17,0.4); background: none; border: none; cursor: pointer; padding: 6px 0; margin-top: 8px; display: block; }
-.archived-tasks-toggle:hover { color: var(--ink); }
-.archived-tasks-list { margin-top: 8px; padding: 12px 14px; background: var(--paper2); border-radius: var(--radius); border: 1px solid var(--border); }
-.archived-task-row { display: flex; align-items: center; gap: 10px; padding: 5px 0; border-bottom: 1px solid rgba(26,22,17,0.06); font-size: 13px; }
-.archived-task-row:last-child { border-bottom: none; }
-.archived-task-date { font-size: 10px; color: rgba(26,22,17,0.35); white-space: nowrap; }
 
 input, select { font-family: 'DM Sans', sans-serif; font-size: 13px; width: 100%; padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--radius); background: white; color: var(--ink); outline: none; }
 input:focus, select:focus { border-color: var(--accent2); }
@@ -270,9 +238,6 @@ label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; colo
   .add-tx-row { grid-template-columns: 1fr 1fr; gap: 6px; }
   .add-tx-row input:first-child { grid-column: 1 / -1; }
 
-  /* Add custom task */
-  .add-custom-task { grid-template-columns: 1fr auto; }
-
   /* Export grid */
   .form-card > div[style*="grid-template-columns:repeat(3"] { grid-template-columns: 1fr !important; }
 
@@ -370,8 +335,7 @@ label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; colo
 <div class="layout">
   <nav class="sidebar">
     <div class="sidebar-label">Vistas</div>
-    <div class="nav-item active" onclick="showSection('tasks')" id="nav-tasks"><span class="nav-icon">☑</span> Tareas de hoy</div>
-    <div class="nav-item" onclick="showSection('books')" id="nav-books"><span class="nav-icon">📚</span> Todos los libros</div>
+    <div class="nav-item active" onclick="showSection('books')" id="nav-books"><span class="nav-icon">📚</span> Todos los libros</div>
     <div class="nav-item" onclick="showSection('quotes')" id="nav-quotes">
       <span class="nav-icon">📋</span> Libros cotizados
       <span class="nav-badge" id="quotes-badge" style="display:none">0</span>
@@ -392,28 +356,8 @@ label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; colo
 
   <main class="main">
 
-    <!-- TASKS -->
-    <div class="section active" id="section-tasks">
-      <div class="section-header">
-        <div class="section-title">Lista de tareas</div>
-        <div class="section-sub" id="today-label"></div>
-      </div>
-      <div id="task-list"></div>
-      <div class="custom-tasks-section">
-        <div class="custom-tasks-header">
-          <div class="custom-tasks-title">Tareas personalizadas</div>
-        </div>
-        <div id="custom-task-list"></div>
-        <div class="add-custom-task">
-          <div><label>Nueva tarea</label><input id="ct-text" type="text" placeholder="Descripción (pega un enlace y se detecta automáticamente)" onkeydown="if(event.key==='Enter')addCustomTask()"></div>
-          <button class="btn btn-primary" onclick="addCustomTask()" style="margin-bottom:1px">＋ Agregar</button>
-        </div>
-        <div id="archived-tasks-section"></div>
-      </div>
-    </div>
-
     <!-- ALL BOOKS -->
-    <div class="section" id="section-books">
+    <div class="section active" id="section-books">
       <div class="section-header">
         <div class="section-title">Todos los libros</div>
         <div class="section-sub" id="books-count"></div>
@@ -957,7 +901,6 @@ function load() {
   initAuth();
   try { const r = localStorage.getItem(SK); if (r) books = JSON.parse(r); } catch(e) { books = []; }
   try { const r = localStorage.getItem(QK); if (r) quotes = JSON.parse(r); } catch(e) { quotes = []; }
-  loadCustomTasks();
   render();
   if (gistConfigured()) {
     setSyncStatus('Cargando…', 'var(--accent2)');
@@ -1008,14 +951,13 @@ function showSection(name) {
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
   document.getElementById('section-'+name).classList.add('active');
   document.getElementById('nav-'+name).classList.add('active');
-  if (name==='tasks') renderTasks();
   if (name==='books') renderBooks();
   if (name==='quotes') renderQuotes();
   if (name==='archive') renderArchive();
   if (name==='config') { updateCfgStatus(); updatePwdStatus(); }
 }
 
-function render() { renderStatsBar(); renderTasks(); renderBooks(); renderQuotes(); renderArchive(); updateBadges(); }
+function render() { renderStatsBar(); renderBooks(); renderQuotes(); renderArchive(); updateBadges(); }
 
 /* ── STATS BAR ── */
 function renderStatsBar() {
@@ -1033,38 +975,6 @@ function renderStatsBar() {
 }
 
 /* ── TASKS ── */
-function renderTasks() {
-  const today = new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-  document.getElementById('today-label').textContent = today;
-  const sorted = [...activeBooks()].sort((a,b)=>a.priority-b.priority);
-  const el = document.getElementById('task-list');
-  if (!sorted.length) {
-    el.innerHTML = `<div class="empty" style="padding:24px 0"><div class="empty-icon">📖</div>No hay libros activos todavía.<br>Aprueba una cotización o agrega un libro.</div>`;
-  } else {
-    el.innerHTML = sorted.map(b => {
-      const u = urgency(b);
-      return `<div class="task-card">
-        <div class="task-stripe ${stageColor(b)}"></div>
-        <div class="task-body">
-          <div class="task-left">
-            <div class="task-title-row"><span class="task-book">${esc(b.title)}</span><span class="task-author">${esc(b.author||'')}</span></div>
-            <div class="task-action">${STAGE_TASKS[b.stage]||b.stage}</div>
-            ${b.notes?`<div style="font-size:12px;color:rgba(26,22,17,0.4);font-style:italic;margin-top:2px">${esc(b.notes)}</div>`:''}
-            <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center">
-              <span class="badge badge-stage">${b.stage}</span>
-              ${b.deadline?`<span class="badge ${u.cls}">${u.text}</span>`:''}
-              ${b.copies?`<span class="badge" style="background:#f0ede8;color:rgba(26,22,17,0.6)">📦 ${b.copies} ejs.</span>`:''}
-              ${owesBadge(b)}
-            </div>
-          </div>
-          <div class="task-num">${b.priority}</div>
-        </div>
-      </div>`;
-    }).join('');
-  }
-  renderCustomTasks();
-}
-
 /* ── BOOKS ── */
 function renderBooks() {
   const active = [...activeBooks()].sort((a,b)=>a.priority-b.priority);
@@ -1124,7 +1034,7 @@ function closeBookModal(e) {
   document.getElementById('book-detail-modal').classList.remove('open');
   document.body.style.overflow = '';
   // Refresh list in case changes were made
-  renderBooks(); renderTasks(); renderStatsBar();
+  renderBooks(); renderStatsBar();
 }
 
 function refreshBookModal(id) {
@@ -1595,7 +1505,7 @@ function saveQuote(id) {
   const val = parseFloat(document.getElementById('eq-'+id).value)||0;
   const b = books.find(x=>x.id===id);
   if (b) { b.quoted=val; save(); }
-  delete editingFin[id]; renderStatsBar(); renderBooks(); renderTasks();
+  delete editingFin[id]; renderStatsBar(); renderBooks();
 }
 function toggleFin(id) { openFin[id]=!openFin[id]; renderBooks(); renderArchive(); }
 function addTx(id) {
@@ -1606,13 +1516,13 @@ function addTx(id) {
   const b = books.find(x=>x.id===id);
   if (!b||!b.transactions) b.transactions=[];
   b.transactions.push({label,amount,type});
-  save(); renderStatsBar(); renderBooks(); renderTasks();
+  save(); renderStatsBar(); renderBooks();
 }
 function deleteTx(bookId, txIdx) {
   const b = books.find(x=>x.id===bookId);
   if (!b) return;
   b.transactions.splice(txIdx,1);
-  save(); renderStatsBar(); renderBooks(); renderTasks();
+  save(); renderStatsBar(); renderBooks();
 }
 function addBook() {
   const title = document.getElementById('nb-title').value.trim();
@@ -1630,7 +1540,7 @@ function addBook() {
   });
   save();
   ['nb-title','nb-author','nb-notes','nb-deadline','nb-budget','nb-copies'].forEach(id=>document.getElementById(id).value='');
-  showSection('tasks');
+  showSection('books');
 }
 function addQuote() {
   const title = document.getElementById('nq-title').value.trim();
@@ -1710,96 +1620,6 @@ function deleteNote(type, id, idx) {
 }
 
 /* ── CUSTOM TASKS ── */
-let customTasks = [];
-let archivedTasks = [];
-let showArchivedTasks = false;
-const CT_KEY = 'editorial_custom_tasks_v1';
-const CT_ARCH_KEY = 'editorial_custom_tasks_archived_v1';
-
-function loadCustomTasks() {
-  try { const r = localStorage.getItem(CT_KEY); if (r) customTasks = JSON.parse(r); } catch(e) { customTasks = []; }
-  try { const r = localStorage.getItem(CT_ARCH_KEY); if (r) archivedTasks = JSON.parse(r); } catch(e) { archivedTasks = []; }
-}
-function saveCustomTasks() {
-  try { localStorage.setItem(CT_KEY, JSON.stringify(customTasks)); } catch(e) {}
-  try { localStorage.setItem(CT_ARCH_KEY, JSON.stringify(archivedTasks)); } catch(e) {}
-}
-function renderCustomTasks() {
-  const el = document.getElementById('custom-task-list');
-  const archEl = document.getElementById('archived-tasks-section');
-  if (!el) return;
-
-  const pending = customTasks.filter(t=>!t.done);
-  const done = customTasks.filter(t=>t.done);
-
-  let html = '';
-  if (!customTasks.length) {
-    html = `<div style="font-size:13px;color:rgba(26,22,17,0.35);padding:8px 0">No hay tareas pendientes.</div>`;
-  } else {
-    html = customTasks.map((t,i) => `
-      <div class="custom-task-item">
-        <input type="checkbox" class="custom-task-check" ${t.done?'checked':''} onchange="toggleCustomTask(${i})">
-        <div class="custom-task-body">
-          <div class="custom-task-text${t.done?' done':''}">${linkify(t.text)}</div>
-        </div>
-        <button class="btn-danger" onclick="deleteCustomTask(${i})" title="Eliminar">✕</button>
-      </div>`).join('');
-    if (done.length) {
-      html += `<button class="btn" onclick="archiveDoneTasks()" style="font-size:11px;margin-top:6px">🗄 Archivar completadas (${done.length})</button>`;
-    }
-  }
-  el.innerHTML = html;
-
-  // Archived tasks section
-  let archHtml = '';
-  if (archivedTasks.length) {
-    archHtml = `<button class="archived-tasks-toggle" onclick="showArchivedTasks=!showArchivedTasks;renderCustomTasks()">
-      ${showArchivedTasks?'▲':'▼'} Tareas completadas archivadas (${archivedTasks.length})
-    </button>`;
-    if (showArchivedTasks) {
-      archHtml += `<div class="archived-tasks-list">
-        <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
-          <button class="btn" onclick="if(confirm('¿Eliminar todo el historial?')){archivedTasks=[];saveCustomTasks();renderCustomTasks();}" style="font-size:11px">Vaciar historial</button>
-        </div>
-        ${[...archivedTasks].reverse().map((t,i)=>`
-          <div class="archived-task-row">
-            <span style="font-size:13px;color:rgba(26,22,17,0.5);flex:1;text-decoration:line-through">${linkify(t.text)}</span>
-            <span class="archived-task-date">${t.completedAt||''}</span>
-            <button class="btn-danger" onclick="deleteArchivedTask(${archivedTasks.length-1-i})" title="Eliminar">✕</button>
-          </div>`).join('')}
-      </div>`;
-    }
-  }
-  archEl.innerHTML = archHtml;
-}
-function addCustomTask() {
-  const text = document.getElementById('ct-text').value.trim();
-  if (!text) return;
-  customTasks.push({ text, done: false });
-  saveCustomTasks();
-  document.getElementById('ct-text').value = '';
-  renderCustomTasks();
-}
-function toggleCustomTask(i) {
-  customTasks[i].done = !customTasks[i].done;
-  saveCustomTasks(); renderCustomTasks();
-}
-function deleteCustomTask(i) {
-  customTasks.splice(i,1);
-  saveCustomTasks(); renderCustomTasks();
-}
-function archiveDoneTasks() {
-  const completedAt = new Date().toLocaleString('es-MX',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
-  const done = customTasks.filter(t=>t.done).map(t=>({...t, completedAt}));
-  archivedTasks.push(...done);
-  customTasks = customTasks.filter(t=>!t.done);
-  saveCustomTasks(); renderCustomTasks();
-}
-function deleteArchivedTask(i) {
-  archivedTasks.splice(i,1);
-  saveCustomTasks(); renderCustomTasks();
-}
-
 function changePri(id, dir) {
   const sorted = [...activeBooks()].sort((a,b)=>a.priority-b.priority);
   const idx = sorted.findIndex(b=>b.id===id);
