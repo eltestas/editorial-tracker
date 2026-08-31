@@ -351,7 +351,7 @@ label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; colo
 .search-result-sub { font-size:12px; color:rgba(26,22,17,0.45); margin-top:2px; }
 .search-hl { background:#fff3b0; border-radius:2px; padding:0 2px; }
 @media (max-width:768px) {
-  #global-search { width:130px !important; }
+  #global-search { width:140px !important; }
   .dash-grid { grid-template-columns:1fr; }
   .stage-bar-label { width:80px; }
 }
@@ -387,10 +387,10 @@ label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; colo
   <div class="stat-item"><div class="stat-label">Por cobrar</div><div class="stat-val" id="sb-owed">—</div></div>
   <div class="stat-item" style="margin-left:auto;border-right:none;padding-right:0">
     <div style="display:flex;align-items:center;gap:10px">
-      <div style="position:relative">
-        <input id="global-search" type="text" placeholder="Buscar..." oninput="doSearch(this.value)"
-          style="font-size:13px;padding:5px 10px 5px 30px;width:180px;border-radius:20px;border:1px solid var(--border);background:rgba(245,240,232,0.1);color:var(--paper);">
-        <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;opacity:0.5">🔍</span>
+      <div style="position:relative" id="search-wrap">
+        <input id="global-search" type="text" placeholder="🔍 Buscar..." oninput="doSearch(this.value)" onblur="hideSearchDropdown()" onfocus="if(this.value.trim())doSearch(this.value)"
+          style="font-size:13px;padding:5px 10px;width:200px;border-radius:20px;border:1px solid rgba(245,240,232,0.2);background:rgba(245,240,232,0.1);color:var(--paper);" autocomplete="off">
+        <div id="search-dropdown" style="display:none;position:absolute;top:calc(100% + 6px);right:0;width:340px;background:white;border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 8px 24px rgba(26,22,17,0.15);z-index:200;max-height:400px;overflow-y:auto;"></div>
       </div>
     </div>
   </div>
@@ -432,15 +432,6 @@ label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; colo
         <div class="section-sub" id="dash-date"></div>
       </div>
       <div id="dashboard-content"></div>
-    </div>
-
-    <!-- SEARCH RESULTS -->
-    <div class="section" id="section-search">
-      <div class="section-header">
-        <div class="section-title">Búsqueda</div>
-        <div class="section-sub" id="search-query-label"></div>
-      </div>
-      <div id="search-results"></div>
     </div>
 
     <!-- ALL BOOKS -->
@@ -2065,59 +2056,87 @@ function renderDashboard() {
 
 /* ── SEARCH ── */
 let searchTimer = null;
+let _searchResults = [];
+
+function hideSearchDropdown() {
+  // Delay so click on result fires first
+  setTimeout(() => {
+    document.getElementById('search-dropdown').style.display = 'none';
+  }, 200);
+}
+
+function searchResultClick(i) {
+  if (_searchResults[i]) {
+    document.getElementById('global-search').value = '';
+    document.getElementById('search-dropdown').style.display = 'none';
+    _searchResults[i].action();
+  }
+}
+
 function doSearch(q) {
   clearTimeout(searchTimer);
   q = q.trim();
-  if (!q) { return; }
-  searchTimer = setTimeout(()=>execSearch(q), 200);
+  const dd = document.getElementById('search-dropdown');
+  if (!q) { dd.style.display = 'none'; return; }
+  searchTimer = setTimeout(() => execSearch(q), 180);
 }
 
 function hl(text, q) {
-  if (!q) return esc(text);
-  const re = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi');
+  if (!q || !text) return esc(text||'');
+  const re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + ')', 'gi');
   return esc(text).replace(re, '<mark class="search-hl">$1</mark>');
 }
 
-let _searchResults = [];
-function searchResultClick(i) { if(_searchResults[i]) _searchResults[i].action(); }
-
 function execSearch(q) {
-  document.querySelectorAll('.section').forEach(el=>el.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
-  document.getElementById('section-search').classList.add('active');
-  document.getElementById('search-query-label').textContent = `"${q}"`;
-
   const lq = q.toLowerCase();
   _searchResults = [];
 
-  activeBooks().forEach(b=>{
+  activeBooks().forEach(b => {
     const fields = [b.title, b.author, b.client?.name, b.client?.email, b.notes].filter(Boolean).join(' ').toLowerCase();
-    if (fields.includes(lq)) _searchResults.push({type:'Libro',typeColor:'#185FA5',title:b.title,sub:`${b.author||''}${b.stage?' · '+b.stage:''}${b.client?.name?' · '+b.client.name:''}`,action:()=>{showSection('books');setTimeout(()=>openBookModal(b.id),150);}});
+    if (fields.includes(lq)) _searchResults.push({
+      type:'Libro', typeColor:'#185FA5',
+      title: b.title,
+      sub: [b.author, b.stage, b.client?.name].filter(Boolean).join(' · '),
+      action: () => { showSection('books'); setTimeout(() => openBookModal(b.id), 150); }
+    });
   });
 
-  quotes.forEach(q2=>{
-    const fields = [q2.title, q2.author, q2.client?.name, q2.client?.email, q2.notes].filter(Boolean).join(' ').toLowerCase();
-    if (fields.includes(lq)) _searchResults.push({type:'Cotización',typeColor:'#4a7fc1',title:q2.title,sub:`${q2.author||''}${q2.client?.name?' · '+q2.client.name:''}`,action:()=>showSection('quotes')});
+  quotes.forEach(q2 => {
+    const fields = [q2.title, q2.author, q2.client?.name, q2.client?.email].filter(Boolean).join(' ').toLowerCase();
+    if (fields.includes(lq)) _searchResults.push({
+      type:'Cotización', typeColor:'#4a7fc1',
+      title: q2.title,
+      sub: [q2.author, q2.client?.name].filter(Boolean).join(' · '),
+      action: () => showSection('quotes')
+    });
   });
 
-  books.filter(b=>b.archived).forEach(b=>{
-    const fields = [b.title, b.author, b.client?.name, b.notes].filter(Boolean).join(' ').toLowerCase();
-    if (fields.includes(lq)) _searchResults.push({type:'Archivado',typeColor:'#888',title:b.title,sub:`${b.author||''} · archivado`,action:()=>showSection('archive')});
+  books.filter(b => b.archived).forEach(b => {
+    const fields = [b.title, b.author, b.client?.name].filter(Boolean).join(' ').toLowerCase();
+    if (fields.includes(lq)) _searchResults.push({
+      type:'Archivado', typeColor:'#888',
+      title: b.title,
+      sub: [b.author, 'archivado'].filter(Boolean).join(' · '),
+      action: () => showSection('archive')
+    });
   });
 
-  const el = document.getElementById('search-results');
+  const dd = document.getElementById('search-dropdown');
   if (!_searchResults.length) {
-    el.innerHTML = `<div class="empty" style="padding:32px 0"><div class="empty-icon">🔍</div>Sin resultados para "${esc(q)}".</div>`;
+    dd.style.display = 'block';
+    dd.innerHTML = '<div style="padding:14px 16px;font-size:13px;color:rgba(26,22,17,0.4)">Sin resultados para "' + esc(q) + '"</div>';
     return;
   }
-  el.innerHTML = _searchResults.map((r,i)=>`
-    <div class="search-result" onclick="searchResultClick(${i})">
-      <div class="search-result-type" style="color:${r.typeColor}">${r.type}</div>
-      <div>
-        <div class="search-result-title">${hl(r.title,q)}</div>
-        <div class="search-result-sub">${hl(r.sub,q)}</div>
-      </div>
-    </div>`).join('');
+  dd.style.display = 'block';
+  dd.innerHTML = _searchResults.map((r, i) =>
+    '<div class="search-result" onmousedown="searchResultClick(' + i + ')" style="border-radius:0;box-shadow:none;border:none;border-bottom:1px solid var(--border);margin:0">'
+    + '<div class="search-result-type" style="color:' + r.typeColor + '">' + r.type + '</div>'
+    + '<div>'
+      + '<div class="search-result-title">' + hl(r.title, q) + '</div>'
+      + '<div class="search-result-sub">' + hl(r.sub, q) + '</div>'
+    + '</div>'
+    + '</div>'
+  ).join('');
 }
 
 load();
