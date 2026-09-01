@@ -350,8 +350,11 @@ label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; colo
 .search-result-title { font-weight:600; font-size:14px; }
 .search-result-sub { font-size:12px; color:rgba(26,22,17,0.45); margin-top:2px; }
 .search-hl { background:#fff3b0; border-radius:2px; padding:0 2px; }
-@media (max-width:768px) {
-  #global-search { width:140px !important; }
+/* Sticky notes drag & drop */
+.sticky-note[draggable] { cursor:grab; }
+.sticky-note[draggable]:active { cursor:grabbing; }
+.sticky-note.drag-over { outline:2px dashed rgba(26,22,17,0.4); outline-offset:3px; transform:scale(1.02); }
+.sticky-note.dragging { opacity:0.4; transform:rotate(2deg); }
   .dash-grid { grid-template-columns:1fr; }
   .stage-bar-label { width:80px; }
 }
@@ -389,7 +392,7 @@ label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; colo
     <div style="display:flex;align-items:center;gap:10px">
       <div style="position:relative" id="search-wrap">
         <input id="global-search" type="text" placeholder="🔍 Buscar..." oninput="doSearch(this.value)" onblur="hideSearchDropdown()" onfocus="if(this.value.trim())doSearch(this.value)"
-          style="font-size:13px;padding:5px 10px;width:200px;border-radius:20px;border:1px solid rgba(245,240,232,0.2);background:rgba(245,240,232,0.1);color:var(--paper);" autocomplete="off">
+          style="font-size:13px;padding:5px 10px;width:200px;border-radius:20px;border:1px solid rgba(245,240,232,0.3);background:rgba(245,240,232,0.15);color:var(--ink);caret-color:var(--ink);" autocomplete="off">
         <div id="search-dropdown" style="display:none;position:absolute;top:calc(100% + 6px);right:0;width:340px;background:white;border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 8px 24px rgba(26,22,17,0.15);z-index:200;max-height:400px;overflow-y:auto;"></div>
       </div>
     </div>
@@ -1112,7 +1115,12 @@ function stickyNoteHTML(b) {
   if (b.notes_log && b.notes_log.length) metaItems.push('📝 ' + b.notes_log.length);
   const overdueExtra = (b.deadline && u.cls === 'badge-overdue')
     ? '<span class="sticky-badge" style="background:rgba(0,0,0,0.2)">⚠ ' + u.text + '</span>' : '';
-  return '<div class="sticky-note sn-' + ci + '" onclick="openBookModal(' + b.id + ')">'
+  return '<div class="sticky-note sn-' + ci + '" draggable="true" data-id="' + b.id + '" onclick="openBookModal(' + b.id + ')"'
+    + ' ondragstart="stickyDragStart(event,' + b.id + ')"'
+    + ' ondragover="stickyDragOver(event)"'
+    + ' ondragleave="stickyDragLeave(event)"'
+    + ' ondrop="stickyDrop(event,' + b.id + ')"'
+    + ' ondragend="stickyDragEnd(event)">'
     + '<div class="sticky-pri">' + b.priority + '</div>'
     + '<div>'
       + '<div class="sticky-title">' + esc(b.title) + '</div>'
@@ -2137,6 +2145,53 @@ function execSearch(q) {
     + '</div>'
     + '</div>'
   ).join('');
+}
+
+/* ── STICKY NOTE DRAG & DROP ── */
+let _dragId = null;
+let _dragging = false;
+
+function stickyDragStart(e, id) {
+  _dragId = id;
+  _dragging = true;
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+}
+
+function stickyDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  e.currentTarget.classList.add('drag-over');
+}
+
+function stickyDragLeave(e) {
+  e.currentTarget.classList.remove('drag-over');
+}
+
+function stickyDragEnd(e) {
+  e.currentTarget.classList.remove('dragging');
+  document.querySelectorAll('.sticky-note').forEach(el => el.classList.remove('drag-over'));
+  setTimeout(function(){ _dragging = false; }, 150);
+}
+
+function stickyDrop(e, targetId) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if (!_dragId || _dragId === targetId) return;
+
+  const sorted = [...activeBooks()].sort((a, b) => a.priority - b.priority);
+  const dragBook   = sorted.find(b => b.id === _dragId);
+  const targetBook = sorted.find(b => b.id === targetId);
+  if (!dragBook || !targetBook) return;
+
+  // Swap priorities
+  const tmp = dragBook.priority;
+  dragBook.priority = targetBook.priority;
+  targetBook.priority = tmp;
+
+  _dragId = null;
+  save();
+  renderBooks();
 }
 
 load();
